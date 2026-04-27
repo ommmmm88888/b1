@@ -58,6 +58,12 @@
   color: #94a3b8;
 }
 
+.hero-card__note {
+  margin-top: 14px;
+  font-size: 0.95rem;
+  color: #cbd5e1;
+}
+
 .hero-card__meta {
   margin-top: 18px;
   display: flex;

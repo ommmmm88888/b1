@@ -185,6 +185,7 @@ export function TrainerScreen() {
               <span>{progress.streak} дн.</span>
             </div>
           </div>
+          <p className="hero-card__note">Работает локально, прогресс сохраняется в браузере.</p>
         </section>
 
         <aside className="side-card">
