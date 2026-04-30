@@ -22,7 +22,7 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Мини-мок B1 и приоритизация ошибок.',
     tasks: [
-      'Сделать короткий B1 mini-mock по 5 зонам: чтение, слушание, грамматика, письмо, говорение.',
+      'Сделать короткий B1 мини-мок по 5 зонам: чтение, слушание, грамматика, письмо, говорение.',
       'Собрать карту слабых зон: что проседает по точности и по времени.',
       'Сформировать список 15-20 персональных ошибок для ежедневного повтора.',
     ],
@@ -34,7 +34,7 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     ],
     speakingPrompt: 'Opowiedz, jak wygląda twój typowy dzień pracy i co robisz po pracy.',
     writingPrompt: 'Napisz krótki e-mail formalny z prośbą o zmianę terminu spotkania.',
-    successCriteria: 'Есть честный baseline по 5 зонам и список конкретных ошибок на коррекцию.',
+    successCriteria: 'Есть честный стартовый срез по 5 зонам и список конкретных ошибок на коррекцию.',
   },
   {
     dayNumber: 2,
@@ -45,9 +45,9 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     tasks: [
       'Выучить и проговорить шаблоны: opinia, zgoda/niezgoda, propozycja, uzasadnienie.',
       'Собрать минимум 12 готовых формальных конструкций для письма.',
-      'Отработать 2 коротких speaking-диалога по экзаменационной логике.',
+      'Отработать 2 коротких устных диалога по экзаменационной логике.',
     ],
-    examSkillTargets: ['Spoken fluency', 'Структура ответа', 'Формальный регистр'],
+    examSkillTargets: ['Беглость речи', 'Структура ответа', 'Формальный регистр'],
     commonMistakesForUkrainianLearner: [
       'Слишком разговорная лексика в формальных заданиях.',
       'Калька с русского/украинского в вежливых формулах.',
@@ -65,7 +65,7 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     focusArea: 'Падежи в бытовых и экзаменационных фразах.',
     tasks: [
       'Сделать 3 набора коротких дриллов на accusative/genitive/instrumental.',
-      'Переписать 15 фраз из worksite-контекста в нейтральный экзаменационный стиль.',
+      'Переписать 15 фраз из рабочего контекста в нейтральный экзаменационный стиль.',
       'Отработать связки с предлогами: do, z, na, o, dla, bez.',
     ],
     examSkillTargets: ['Грамматическая точность', 'Лексико-грамматический контроль'],
@@ -129,7 +129,7 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     tasks: [
       'Написать 2 текста в формате B1 с таймером.',
       'Сделать редактуру: структура, связки, грамматика, регистр.',
-      'Переписать финальную версию после correction notes.',
+      'Переписать финальную версию после заметок по исправлениям.',
     ],
     examSkillTargets: ['Письмо по формату', 'Структура абзацев', 'Формальный стиль'],
     commonMistakesForUkrainianLearner: [
@@ -143,13 +143,13 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
   },
   {
     dayNumber: 7,
-    title: 'Listening-heavy + shadowing',
+    title: 'День аудирования и повторения за диктором',
     mainGoal: 'Ускорить понимание на слух и реакцию в экзаменационном темпе.',
     estimatedHours: DAILY_HOURS,
     focusArea: 'Слушание B1 и повтор за диктором.',
     tasks: [
-      'Два listening-блока: первичное прослушивание и повтор с разбором.',
-      'Shadowing 15-20 минут на четкие короткие фразы.',
+      'Два блока аудирования: первичное прослушивание и повтор с разбором.',
+      'Повтор за диктором 15-20 минут на четкие короткие фразы.',
       'Краткий пересказ услышанного в 6-8 предложениях.',
     ],
     examSkillTargets: ['Аудирование', 'Скорость обработки речи', 'Произносительная уверенность'],
@@ -164,7 +164,7 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
   },
   {
     dayNumber: 8,
-    title: 'Speaking lab: от работы к экзамену',
+    title: 'Устная лаборатория: от работы к экзамену',
     mainGoal: 'Перенести бытовое и рабочее общение в экзаменационный формат ответа.',
     estimatedHours: DAILY_HOURS,
     focusArea: 'Opis obrazka, dialog, opinia, аргументация.',
@@ -185,13 +185,13 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
   },
   {
     dayNumber: 9,
-    title: 'Grammar rescue',
+    title: 'Грамматическая коррекция',
     mainGoal: 'Точечно закрыть 30-50 частых ошибок UA/RU -> PL.',
     estimatedHours: DAILY_HOURS,
     focusArea: 'Персональная грамматическая коррекция.',
     tasks: [
       'Собрать свой список 30-50 ошибок и сгруппировать по типам.',
-      'Сделать короткие drills на каждый тип ошибки.',
+      'Сделать короткие упражнения на каждый тип ошибки.',
       'Переписать 10 ошибочных фраз в правильный экзаменационный вариант.',
     ],
     examSkillTargets: ['Грамматическая устойчивость', 'Снижение повторяемых ошибок'],
@@ -206,12 +206,12 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
   },
   {
     dayNumber: 10,
-    title: 'Полный B1 mini-mock',
+    title: 'Полный B1 мини-мок',
     mainGoal: 'Проверить прогресс после блока коррекции в условиях, близких к экзамену.',
     estimatedHours: DAILY_HOURS,
     focusArea: 'Комплексная проверка по 5 зонам.',
     tasks: [
-      'Пройти полный mini-mock с таймером и без подсказок.',
+      'Пройти полный мини-мок с таймером и без подсказок.',
       'Зафиксировать итог по каждой зоне и сравнить с днем 1.',
       'Отметить 5 критичных ошибок для последних дней.',
     ],
@@ -227,14 +227,14 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
   },
   {
     dayNumber: 11,
-    title: 'Correction loop',
+    title: 'Цикл коррекции',
     mainGoal: 'Дожать слабые зоны: переписать, повторить, перезаписать устные ответы.',
     estimatedHours: DAILY_HOURS,
     focusArea: 'Цикл доработки после мока.',
     tasks: [
       'Переписать письменные задания с учетом замечаний.',
       'Повторить проблемные grammar-паттерны в коротких блоках.',
-      'Сделать speaking-retry на темах, где был провал.',
+      'Повторить устный ответ на темах, где был провал.',
     ],
     examSkillTargets: ['Исправление ошибок', 'Повышение предсказуемости результата'],
     commonMistakesForUkrainianLearner: [
@@ -242,13 +242,13 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
       'Слабый перенос правок из письма в говорение.',
       'Неритмичная работа без приоритизации.',
     ],
-    speakingPrompt: 'Powiedz, co poprawiłeś od początku sprintu i co jeszcze wymaga pracy.',
+    speakingPrompt: 'Powiedz, co poprawiłeś od początku przygotowań i co jeszcze wymaga pracy.',
     writingPrompt: 'Napisz poprawioną wersję tekstu po otrzymaniu uwag egzaminatora.',
     successCriteria: 'Ключевые ошибки дня 10 переработаны и частично стабилизированы.',
   },
   {
     dayNumber: 12,
-    title: 'Финальный mock и стратегия экзамена',
+    title: 'Финальный мок и стратегия экзамена',
     mainGoal: 'Выйти на рабочую готовность и зафиксировать план поведения на экзамене.',
     estimatedHours: DAILY_HOURS,
     focusArea: 'Финальная проверка и стабилизация.',

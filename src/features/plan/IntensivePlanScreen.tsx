@@ -50,7 +50,7 @@ export function IntensivePlanScreen() {
   }, [selectedWeek])
 
   useEffect(() => {
-    // TODO v0.4: add lightweight completion marks per sprint day.
+    // TODO v0.4: add lightweight completion marks per super-intensive day.
     globalThis.localStorage?.setItem(DAY_STORAGE_KEY, `${selectedDay}`)
   }, [selectedDay])
 
@@ -73,8 +73,8 @@ export function IntensivePlanScreen() {
           </h1>
           <p>
             {planType === '8weeks'
-              ? 'Планировочный слой для дисциплинированной подготовки: ежедневный SRS, регулярная продуктивная практика и контроль через B1-style mock.'
-              : 'Для украинца, который уже общается с поляками и готовится к экзамену быстро.'}
+              ? 'Планировочный слой для дисциплинированной подготовки: ежедневный SRS, регулярная продуктивная практика и контроль через пробный экзамен B1.'
+              : 'Для украинского ученика, который уже общается с поляками и готовится к экзамену быстро.'}
           </p>
           <div className="hero-card__meta">
             <div className="pill">
@@ -95,7 +95,7 @@ export function IntensivePlanScreen() {
 
         <aside className="side-card">
           <h2>Тип плана</h2>
-          <p>Выберите методику: длительный интенсив или экзаменационный sprint/rescue режим.</p>
+          <p>Выберите методику: длительный интенсив или короткий экзаменационный режим.</p>
           <div className="plan-type-switch" role="tablist" aria-label="Тип интенсива">
             <button
               className={`week-chip ${planType === '8weeks' ? 'week-chip--active' : ''}`}
@@ -122,19 +122,19 @@ export function IntensivePlanScreen() {
                 <div className="muted">ежедневный цикл закрепления лексики и структур</div>
               </div>
               <div className="stat">
-                <strong>Speaking labs 3-4 раза</strong>
+                <strong>Устные лаборатории 3-4 раза</strong>
                 <div className="muted">короткие разговорные блоки под таймер</div>
               </div>
               <div className="stat">
-                <strong>Writing cycles 2 раза</strong>
+                <strong>Циклы письма 2 раза</strong>
                 <div className="muted">черновик, правка и финальная версия</div>
               </div>
               <div className="stat">
-                <strong>Listening blocks 2 раза</strong>
+                <strong>Блоки аудирования 2 раза</strong>
                 <div className="muted">слушание с повтором и разбором</div>
               </div>
               <div className="stat">
-                <strong>Mock exam раз в 2 недели</strong>
+                <strong>Пробный экзамен раз в 2 недели</strong>
                 <div className="muted">проверка прогресса во всех 5 экзаменационных зонах</div>
               </div>
             </div>
@@ -146,11 +146,11 @@ export function IntensivePlanScreen() {
               </div>
               <div className="stat">
                 <strong>Фокус: формат экзамена</strong>
-                <div className="muted">письмо, говорение, grammar rescue, mini-mock</div>
+                <div className="muted">письмо, говорение, грамматическая коррекция, мини-мок</div>
               </div>
               <div className="stat">
                 <strong>Контекст: от работы к экзамену</strong>
-                <div className="muted">перенос бытовых/worksite шаблонов в B1-формат</div>
+                <div className="muted">перенос бытовых и рабочих шаблонов в B1-формат</div>
               </div>
             </div>
           )}
@@ -166,7 +166,7 @@ export function IntensivePlanScreen() {
                 <p>{weekPlan.focus}</p>
               </div>
               <div className="pill">
-                <strong>Mock:</strong>
+                <strong>Пробник:</strong>
                 <span>{weekPlan.mockExam ? 'Да' : 'Нет'}</span>
               </div>
             </div>
@@ -181,15 +181,15 @@ export function IntensivePlanScreen() {
                 <strong>{weekPlan.dailySrs}</strong>
               </div>
               <div className="summary-card__metric">
-                <span>Speaking labs</span>
+                <span>Устные лаборатории</span>
                 <strong>{weekPlan.speakingLabs}</strong>
               </div>
               <div className="summary-card__metric">
-                <span>Writing cycles</span>
+                <span>Циклы письма</span>
                 <strong>{weekPlan.writingCycles}</strong>
               </div>
               <div className="summary-card__metric">
-                <span>Listening blocks</span>
+                <span>Блоки аудирования</span>
                 <strong>{weekPlan.listeningBlocks}</strong>
               </div>
               <div className="summary-card__metric">
@@ -230,15 +230,15 @@ export function IntensivePlanScreen() {
                 <strong>{dayPlan.estimatedHours}</strong>
               </div>
               <div className="summary-card__metric">
-                <span>Skill targets</span>
+                <span>Экзаменационные навыки</span>
                 <strong>{dayPlan.examSkillTargets.join(', ')}</strong>
               </div>
               <div className="summary-card__metric">
-                <span>Speaking prompt</span>
+                <span>Тема для устного ответа</span>
                 <strong>{dayPlan.speakingPrompt}</strong>
               </div>
               <div className="summary-card__metric">
-                <span>Writing prompt</span>
+                <span>Тема письма</span>
                 <strong>{dayPlan.writingPrompt ?? 'Сегодня можно без письменного блока'}</strong>
               </div>
               <div className="summary-card__metric">
@@ -276,7 +276,7 @@ export function IntensivePlanScreen() {
           <p>
             {planType === '8weeks'
               ? 'Переключайтесь между неделями, чтобы видеть фокус и рабочий объем.'
-              : 'Переключайтесь между днями 1-12, чтобы идти по sprint-плану последовательно.'}
+              : 'Переключайтесь между днями 1-12, чтобы идти по плану последовательно.'}
           </p>
           <div
             className={planType === '8weeks' ? 'week-picker' : 'day-picker'}
