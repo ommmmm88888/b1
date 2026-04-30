@@ -413,6 +413,18 @@
   gap: 10px;
 }
 
+.plan-type-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.day-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .week-chip {
   appearance: none;
   min-height: 44px;
@@ -469,6 +481,10 @@
 
   .week-picker {
     grid-template-columns: 1fr;
+  }
+
+  .day-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .summary-card__metrics {
