@@ -4,6 +4,44 @@
   box-sizing: border-box;
 }
 
+.mode-switch {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 14px 24px 0;
+  background: linear-gradient(180deg, rgba(2, 6, 23, 0.9), rgba(2, 6, 23, 0.24));
+}
+
+.mode-switch__inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  display: inline-flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.68);
+}
+
+.mode-switch__button {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #cbd5e1;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.mode-switch__button--active {
+  color: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.25);
+  background: rgba(30, 41, 59, 0.95);
+}
+
 .app-shell__grid {
   max-width: 1240px;
   margin: 0 auto;
@@ -352,6 +390,47 @@
   font-size: 1.15rem;
 }
 
+.app-shell__grid--plan .summary-card__metric strong {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.plan-list {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 10px;
+  color: #dbeafe;
+}
+
+.plan-list li::marker {
+  color: #60a5fa;
+}
+
+.week-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.week-chip {
+  appearance: none;
+  min-height: 44px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #cbd5e1;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.week-chip--active {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(30, 41, 59, 0.96);
+  color: #f8fafc;
+}
+
 .empty-state {
   padding: 18px;
   border-radius: 18px;
@@ -361,6 +440,10 @@
 }
 
 @media (max-width: 1080px) {
+  .mode-switch {
+    padding: 14px 16px 0;
+  }
+
   .app-shell {
     padding: 16px;
   }
@@ -371,11 +454,21 @@
 }
 
 @media (max-width: 640px) {
+  .mode-switch__inner {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .hero-card,
   .trainer-card,
   .summary-card,
   .side-card {
     padding: 18px;
+  }
+
+  .week-picker {
+    grid-template-columns: 1fr;
   }
 
   .summary-card__metrics {
