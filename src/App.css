@@ -439,6 +439,15 @@
   transition: width 160ms ease;
 }
 
+.progress-summary {
+  gap: 14px;
+}
+
+.progress-summary .card-stage__header p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
 .task-list {
   display: grid;
   gap: 10px;
@@ -560,6 +569,23 @@
   border-color: rgba(56, 189, 248, 0.55);
   background: rgba(30, 41, 59, 0.96);
   color: #f8fafc;
+}
+
+.day-chip {
+  display: grid;
+  gap: 3px;
+  align-content: center;
+  text-align: left;
+}
+
+.day-chip small {
+  color: #94a3b8;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.day-chip.week-chip--active small {
+  color: #bfdbfe;
 }
 
 .empty-state {

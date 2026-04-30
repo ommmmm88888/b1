@@ -10,6 +10,7 @@ import {
   setSuperIntensiveDayNote,
   setSuperIntensiveTaskCompleted,
 } from '../../lib/superIntensiveProgressStorage'
+import { calculateSuperIntensiveStats, getWeakZoneInsight } from '../../lib/superIntensiveStats'
 
 type PlanType = '8weeks' | '12days'
 
@@ -46,6 +47,18 @@ function getCompletionFeedback(completionPercent: number): string {
   }
 
   return 'День закрыт. Завтра начните с повторения ошибок.'
+}
+
+function getDayStatusLabel(status: 'not-started' | 'in-progress' | 'completed'): string {
+  if (status === 'completed') {
+    return 'закрыт'
+  }
+
+  if (status === 'in-progress') {
+    return 'в процессе'
+  }
+
+  return 'не начат'
 }
 
 export function IntensivePlanScreen() {
@@ -85,6 +98,11 @@ export function IntensivePlanScreen() {
   const completionPercent =
     dayPlan.tasks.length > 0 ? Math.round((completedTaskCount / dayPlan.tasks.length) * 100) : 0
   const completionFeedback = getCompletionFeedback(completionPercent)
+  const superStats = useMemo(
+    () => calculateSuperIntensiveStats(superIntensivePlan, superProgress),
+    [superProgress],
+  )
+  const weakZoneInsight = getWeakZoneInsight(superStats)
 
   function handleSelectDay(dayNumber: number) {
     setSuperProgress((current) => setSelectedSuperIntensiveDay(current, dayNumber))
@@ -271,6 +289,43 @@ export function IntensivePlanScreen() {
               </div>
             </div>
 
+            <div className="card-stage progress-summary">
+              <div className="card-stage__header">
+                <span className="card-stage__category">Сводка интенсива</span>
+                <p>{weakZoneInsight}</p>
+              </div>
+              <div className="summary-card__metrics">
+                <div className="summary-card__metric">
+                  <span>Начато дней</span>
+                  <strong>
+                    {superStats.daysStarted} из {superStats.totalDays}
+                  </strong>
+                </div>
+                <div className="summary-card__metric">
+                  <span>Закрыто дней</span>
+                  <strong>
+                    {superStats.daysCompleted} из {superStats.totalDays}
+                  </strong>
+                </div>
+                <div className="summary-card__metric">
+                  <span>Выполнено задач</span>
+                  <strong>
+                    {superStats.totalTasksCompleted} из {superStats.totalTasksAvailable}
+                  </strong>
+                </div>
+                <div className="summary-card__metric">
+                  <span>Общий прогресс</span>
+                  <strong>{superStats.overallCompletionPercent}%</strong>
+                </div>
+              </div>
+              <div className="checklist-progress" aria-hidden="true">
+                <div
+                  className="checklist-progress__fill"
+                  style={{ width: `${superStats.overallCompletionPercent}%` }}
+                />
+              </div>
+            </div>
+
             <div className="summary-card__metrics">
               <div className="summary-card__metric">
                 <span>Часы</span>
@@ -387,12 +442,20 @@ export function IntensivePlanScreen() {
               : superIntensivePlan.map((day) => (
                   <button
                     key={day.dayNumber}
-                    className={`week-chip ${selectedDay === day.dayNumber ? 'week-chip--active' : ''}`}
+                    className={`week-chip day-chip ${
+                      selectedDay === day.dayNumber ? 'week-chip--active' : ''
+                    }`}
                     type="button"
                     onClick={() => handleSelectDay(day.dayNumber)}
                     aria-pressed={selectedDay === day.dayNumber}
                   >
-                    День {day.dayNumber}
+                    <span>День {day.dayNumber}</span>
+                    <small>
+                      {getDayStatusLabel(
+                        superStats.dayStatuses.find((status) => status.dayNumber === day.dayNumber)
+                          ?.status ?? 'not-started',
+                      )}
+                    </small>
                   </button>
                 ))}
           </div>
