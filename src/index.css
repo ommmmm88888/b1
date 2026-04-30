@@ -35,7 +35,8 @@ body {
 
 body,
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 

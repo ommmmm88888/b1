@@ -1,10 +1,12 @@
+import type { SuperIntensiveTask } from '../types/intensive'
+
 export interface SuperIntensiveDayPlan {
   dayNumber: number
   title: string
   mainGoal: string
   estimatedHours: string
   focusArea: string
-  tasks: string[]
+  tasks: SuperIntensiveTask[]
   examSkillTargets: string[]
   commonMistakesForUkrainianLearner: string[]
   speakingPrompt: string
@@ -22,9 +24,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Мини-мок B1 и приоритизация ошибок.',
     tasks: [
-      'Сделать короткий B1 мини-мок по 5 зонам: чтение, слушание, грамматика, письмо, говорение.',
-      'Собрать карту слабых зон: что проседает по точности и по времени.',
-      'Сформировать список 15-20 персональных ошибок для ежедневного повтора.',
+      {
+        id: 'd1-mini-mock',
+        title: 'Сделать короткий B1 мини-мок по 5 зонам.',
+        durationMinutes: 90,
+        type: 'пробный экзамен',
+      },
+      {
+        id: 'd1-weakness-map',
+        title: 'Собрать карту слабых зон: точность, время, стресс.',
+        durationMinutes: 40,
+        type: 'исправление ошибок',
+      },
+      {
+        id: 'd1-error-list',
+        title: 'Сформировать список 15-20 ошибок для ежедневного повтора.',
+        durationMinutes: 30,
+        type: 'повторение',
+      },
     ],
     examSkillTargets: ['Тайминг задания', 'Понимание формата', 'Самодиагностика'],
     commonMistakesForUkrainianLearner: [
@@ -43,9 +60,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Фразы-скелеты для B1 ответов.',
     tasks: [
-      'Выучить и проговорить шаблоны: opinia, zgoda/niezgoda, propozycja, uzasadnienie.',
-      'Собрать минимум 12 готовых формальных конструкций для письма.',
-      'Отработать 2 коротких устных диалога по экзаменационной логике.',
+      {
+        id: 'd2-speaking-templates',
+        title: 'Проговорить шаблоны: opinia, zgoda, propozycja, uzasadnienie.',
+        durationMinutes: 55,
+        type: 'говорение',
+      },
+      {
+        id: 'd2-writing-templates',
+        title: 'Собрать 12 формальных конструкций для письма.',
+        durationMinutes: 45,
+        type: 'письмо',
+      },
+      {
+        id: 'd2-dialogues',
+        title: 'Отработать 2 коротких устных диалога по экзаменационной логике.',
+        durationMinutes: 50,
+        type: 'говорение',
+      },
     ],
     examSkillTargets: ['Беглость речи', 'Структура ответа', 'Формальный регистр'],
     commonMistakesForUkrainianLearner: [
@@ -64,9 +96,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Падежи в бытовых и экзаменационных фразах.',
     tasks: [
-      'Сделать 3 набора коротких дриллов на accusative/genitive/instrumental.',
-      'Переписать 15 фраз из рабочего контекста в нейтральный экзаменационный стиль.',
-      'Отработать связки с предлогами: do, z, na, o, dla, bez.',
+      {
+        id: 'd3-case-drills',
+        title: 'Сделать 3 набора коротких упражнений на biernik, dopełniacz, narzędnik.',
+        durationMinutes: 75,
+        type: 'грамматика',
+      },
+      {
+        id: 'd3-work-to-exam',
+        title: 'Переписать 15 рабочих фраз в нейтральный экзаменационный стиль.',
+        durationMinutes: 45,
+        type: 'исправление ошибок',
+      },
+      {
+        id: 'd3-prepositions',
+        title: 'Отработать связки с предлогами: do, z, na, o, dla, bez.',
+        durationMinutes: 35,
+        type: 'грамматика',
+      },
     ],
     examSkillTargets: ['Грамматическая точность', 'Лексико-грамматический контроль'],
     commonMistakesForUkrainianLearner: [
@@ -85,9 +132,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Czas przeszły в устной и письменной части.',
     tasks: [
-      'Сделать короткие устные истории в прошедшем времени с самопроверкой.',
-      'Отработать согласование рода и числа в 20 целевых фразах.',
-      'Пересказать рабочую ситуацию в прошлом с экзаменационными связками.',
+      {
+        id: 'd4-past-stories',
+        title: 'Сделать короткие устные истории в прошедшем времени с самопроверкой.',
+        durationMinutes: 55,
+        type: 'говорение',
+      },
+      {
+        id: 'd4-agreement',
+        title: 'Отработать согласование рода и числа в 20 целевых фразах.',
+        durationMinutes: 50,
+        type: 'грамматика',
+      },
+      {
+        id: 'd4-work-retell',
+        title: 'Пересказать рабочую ситуацию в прошлом с экзаменационными связками.',
+        durationMinutes: 45,
+        type: 'говорение',
+      },
     ],
     examSkillTargets: ['Говорение в прошедшем', 'Грамматика согласования'],
     commonMistakesForUkrainianLearner: [
@@ -106,9 +168,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Aspekt czasownika в типичных B1 задачах.',
     tasks: [
-      'Пары aspekty: robić/zrobić, pisać/napisać, kupować/kupić в контексте.',
-      'Сделать упражнения на выбор вида по смыслу результата.',
-      'Короткие диалоги: план, выполнение, итог.',
+      {
+        id: 'd5-aspect-pairs',
+        title: 'Разобрать пары: robić/zrobić, pisać/napisać, kupować/kupić.',
+        durationMinutes: 55,
+        type: 'грамматика',
+      },
+      {
+        id: 'd5-result-choice',
+        title: 'Сделать упражнения на выбор вида по смыслу результата.',
+        durationMinutes: 45,
+        type: 'грамматика',
+      },
+      {
+        id: 'd5-plan-result-dialogues',
+        title: 'Проговорить короткие диалоги: план, выполнение, итог.',
+        durationMinutes: 40,
+        type: 'говорение',
+      },
     ],
     examSkillTargets: ['Точность значения', 'Логика высказывания'],
     commonMistakesForUkrainianLearner: [
@@ -127,9 +204,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'E-mail, zaproszenie, ogłoszenie, reklamacja.',
     tasks: [
-      'Написать 2 текста в формате B1 с таймером.',
-      'Сделать редактуру: структура, связки, грамматика, регистр.',
-      'Переписать финальную версию после заметок по исправлениям.',
+      {
+        id: 'd6-timed-writing',
+        title: 'Написать 2 текста в формате B1 с таймером.',
+        durationMinutes: 75,
+        type: 'письмо',
+      },
+      {
+        id: 'd6-editing',
+        title: 'Сделать редактуру: структура, связки, грамматика, регистр.',
+        durationMinutes: 45,
+        type: 'исправление ошибок',
+      },
+      {
+        id: 'd6-final-version',
+        title: 'Переписать финальную версию после заметок по исправлениям.',
+        durationMinutes: 40,
+        type: 'письмо',
+      },
     ],
     examSkillTargets: ['Письмо по формату', 'Структура абзацев', 'Формальный стиль'],
     commonMistakesForUkrainianLearner: [
@@ -148,9 +240,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Слушание B1 и повтор за диктором.',
     tasks: [
-      'Два блока аудирования: первичное прослушивание и повтор с разбором.',
-      'Повтор за диктором 15-20 минут на четкие короткие фразы.',
-      'Краткий пересказ услышанного в 6-8 предложениях.',
+      {
+        id: 'd7-listening-blocks',
+        title: 'Сделать 2 блока аудирования: первый проход и повтор с разбором.',
+        durationMinutes: 80,
+        type: 'аудирование',
+      },
+      {
+        id: 'd7-shadowing',
+        title: 'Повторять за диктором 15-20 минут на четкие короткие фразы.',
+        durationMinutes: 25,
+        type: 'аудирование',
+      },
+      {
+        id: 'd7-retell',
+        title: 'Пересказать услышанное в 6-8 предложениях.',
+        durationMinutes: 30,
+        type: 'говорение',
+      },
     ],
     examSkillTargets: ['Аудирование', 'Скорость обработки речи', 'Произносительная уверенность'],
     commonMistakesForUkrainianLearner: [
@@ -169,9 +276,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Opis obrazka, dialog, opinia, аргументация.',
     tasks: [
-      'Отработать описания картинки по четкой структуре.',
-      'Сделать 2 диалога: просьба/переговоры и решение конфликта.',
-      'Дать 3 коротких аргументированных мнения на экзаменационные темы.',
+      {
+        id: 'd8-picture-description',
+        title: 'Отработать описание картинки по четкой структуре.',
+        durationMinutes: 45,
+        type: 'говорение',
+      },
+      {
+        id: 'd8-dialogues',
+        title: 'Сделать 2 диалога: просьба, переговоры, решение конфликта.',
+        durationMinutes: 55,
+        type: 'говорение',
+      },
+      {
+        id: 'd8-opinions',
+        title: 'Дать 3 коротких аргументированных мнения на экзаменационные темы.',
+        durationMinutes: 45,
+        type: 'говорение',
+      },
     ],
     examSkillTargets: ['Говорение по структуре', 'Аргументация', 'Контроль темпа'],
     commonMistakesForUkrainianLearner: [
@@ -190,9 +312,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Персональная грамматическая коррекция.',
     tasks: [
-      'Собрать свой список 30-50 ошибок и сгруппировать по типам.',
-      'Сделать короткие упражнения на каждый тип ошибки.',
-      'Переписать 10 ошибочных фраз в правильный экзаменационный вариант.',
+      {
+        id: 'd9-error-groups',
+        title: 'Сгруппировать 30-50 ошибок по типам.',
+        durationMinutes: 45,
+        type: 'исправление ошибок',
+      },
+      {
+        id: 'd9-targeted-drills',
+        title: 'Сделать короткие упражнения на каждый тип ошибки.',
+        durationMinutes: 70,
+        type: 'грамматика',
+      },
+      {
+        id: 'd9-rewrite-errors',
+        title: 'Переписать 10 ошибочных фраз в правильный экзаменационный вариант.',
+        durationMinutes: 40,
+        type: 'исправление ошибок',
+      },
     ],
     examSkillTargets: ['Грамматическая устойчивость', 'Снижение повторяемых ошибок'],
     commonMistakesForUkrainianLearner: [
@@ -211,9 +348,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Комплексная проверка по 5 зонам.',
     tasks: [
-      'Пройти полный мини-мок с таймером и без подсказок.',
-      'Зафиксировать итог по каждой зоне и сравнить с днем 1.',
-      'Отметить 5 критичных ошибок для последних дней.',
+      {
+        id: 'd10-full-mini-mock',
+        title: 'Пройти полный мини-мок с таймером и без подсказок.',
+        durationMinutes: 110,
+        type: 'пробный экзамен',
+      },
+      {
+        id: 'd10-zone-score',
+        title: 'Зафиксировать итог по каждой зоне и сравнить с днем 1.',
+        durationMinutes: 35,
+        type: 'исправление ошибок',
+      },
+      {
+        id: 'd10-critical-errors',
+        title: 'Отметить 5 критичных ошибок для последних дней.',
+        durationMinutes: 25,
+        type: 'исправление ошибок',
+      },
     ],
     examSkillTargets: ['Стабильность под таймером', 'Интеграция навыков'],
     commonMistakesForUkrainianLearner: [
@@ -232,9 +384,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Цикл доработки после мока.',
     tasks: [
-      'Переписать письменные задания с учетом замечаний.',
-      'Повторить проблемные grammar-паттерны в коротких блоках.',
-      'Повторить устный ответ на темах, где был провал.',
+      {
+        id: 'd11-writing-rewrite',
+        title: 'Переписать письменные задания с учетом замечаний.',
+        durationMinutes: 60,
+        type: 'письмо',
+      },
+      {
+        id: 'd11-grammar-repeat',
+        title: 'Повторить проблемные грамматические паттерны в коротких блоках.',
+        durationMinutes: 50,
+        type: 'грамматика',
+      },
+      {
+        id: 'd11-speaking-retry',
+        title: 'Повторить устный ответ на темах, где был провал.',
+        durationMinutes: 45,
+        type: 'говорение',
+      },
     ],
     examSkillTargets: ['Исправление ошибок', 'Повышение предсказуемости результата'],
     commonMistakesForUkrainianLearner: [
@@ -253,9 +420,24 @@ export const superIntensivePlan: SuperIntensiveDayPlan[] = [
     estimatedHours: DAILY_HOURS,
     focusArea: 'Финальная проверка и стабилизация.',
     tasks: [
-      'Сделать финальный мини-мок в спокойном темпе, но с таймером.',
-      'Сформировать личную стратегию: что делать при ступоре, ошибке, нехватке времени.',
-      'Короткая стабилизация слабой зоны без перегруза.',
+      {
+        id: 'd12-final-mock',
+        title: 'Сделать финальный мини-мок в спокойном темпе, но с таймером.',
+        durationMinutes: 95,
+        type: 'пробный экзамен',
+      },
+      {
+        id: 'd12-exam-strategy',
+        title: 'Сформировать личную стратегию на ступор, ошибку и нехватку времени.',
+        durationMinutes: 35,
+        type: 'повторение',
+      },
+      {
+        id: 'd12-weak-zone',
+        title: 'Стабилизировать одну слабую зону без перегруза.',
+        durationMinutes: 35,
+        type: 'исправление ошибок',
+      },
     ],
     examSkillTargets: ['Экзаменационная готовность', 'Стратегия управления стрессом'],
     commonMistakesForUkrainianLearner: [

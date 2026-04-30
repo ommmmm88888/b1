@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { intensivePlan } from '../../data/intensivePlan'
 import { superIntensivePlan } from '../../data/superIntensivePlan'
+import {
+  getDayProgress,
+  loadSuperIntensiveProgress,
+  resetSuperIntensiveDay,
+  saveSuperIntensiveProgress,
+  setSelectedSuperIntensiveDay,
+  setSuperIntensiveDayNote,
+  setSuperIntensiveTaskCompleted,
+} from '../../lib/superIntensiveProgressStorage'
 
 type PlanType = '8weeks' | '12days'
 
 const WEEK_STORAGE_KEY = 'b1_intensive_selected_week'
-const DAY_STORAGE_KEY = 'b1_super_intensive_selected_day'
 const PLAN_TYPE_STORAGE_KEY = 'b1_intensive_plan_type'
 
 function resolveInitialPlanType(): PlanType {
@@ -24,21 +32,27 @@ function resolveInitialWeek(): number {
   return parsed
 }
 
-function resolveInitialDay(): number {
-  const raw = globalThis.localStorage?.getItem(DAY_STORAGE_KEY)
-  const parsed = Number(raw)
-
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > superIntensivePlan.length) {
-    return 1
+function getCompletionFeedback(completionPercent: number): string {
+  if (completionPercent === 0) {
+    return 'Начните с короткого повторения - это снижает сопротивление.'
   }
 
-  return parsed
+  if (completionPercent < 50) {
+    return 'День начат. Главное - закрыть письмо или говорение.'
+  }
+
+  if (completionPercent < 100) {
+    return 'Хороший темп. Добейте одну слабую зону.'
+  }
+
+  return 'День закрыт. Завтра начните с повторения ошибок.'
 }
 
 export function IntensivePlanScreen() {
   const [planType, setPlanType] = useState<PlanType>(resolveInitialPlanType)
   const [selectedWeek, setSelectedWeek] = useState<number>(resolveInitialWeek)
-  const [selectedDay, setSelectedDay] = useState<number>(resolveInitialDay)
+  const [superProgress, setSuperProgress] = useState(() => loadSuperIntensiveProgress())
+  const selectedDay = superProgress.selectedDay
 
   useEffect(() => {
     globalThis.localStorage?.setItem(PLAN_TYPE_STORAGE_KEY, planType)
@@ -50,9 +64,8 @@ export function IntensivePlanScreen() {
   }, [selectedWeek])
 
   useEffect(() => {
-    // TODO v0.4: add lightweight completion marks per super-intensive day.
-    globalThis.localStorage?.setItem(DAY_STORAGE_KEY, `${selectedDay}`)
-  }, [selectedDay])
+    saveSuperIntensiveProgress(superProgress)
+  }, [superProgress])
 
   const weekPlan = useMemo(
     () => intensivePlan.find((week) => week.weekNumber === selectedWeek) ?? intensivePlan[0],
@@ -62,6 +75,40 @@ export function IntensivePlanScreen() {
     () => superIntensivePlan.find((day) => day.dayNumber === selectedDay) ?? superIntensivePlan[0],
     [selectedDay],
   )
+  const dayProgress = useMemo(
+    () => getDayProgress(superProgress, dayPlan.dayNumber),
+    [dayPlan.dayNumber, superProgress],
+  )
+  const completedTaskCount = dayPlan.tasks.filter((task) =>
+    dayProgress.completedTaskIds.includes(task.id),
+  ).length
+  const completionPercent =
+    dayPlan.tasks.length > 0 ? Math.round((completedTaskCount / dayPlan.tasks.length) * 100) : 0
+  const completionFeedback = getCompletionFeedback(completionPercent)
+
+  function handleSelectDay(dayNumber: number) {
+    setSuperProgress((current) => setSelectedSuperIntensiveDay(current, dayNumber))
+  }
+
+  function handleToggleTask(taskId: string, completed: boolean) {
+    setSuperProgress((current) =>
+      setSuperIntensiveTaskCompleted(current, dayPlan.dayNumber, taskId, completed),
+    )
+  }
+
+  function handleNoteChange(note: string) {
+    setSuperProgress((current) => setSuperIntensiveDayNote(current, dayPlan.dayNumber, note))
+  }
+
+  function handleResetCurrentDay() {
+    const confirmed = window.confirm('Сбросить прогресс текущего дня? Заметка тоже будет очищена.')
+
+    if (!confirmed) {
+      return
+    }
+
+    setSuperProgress((current) => resetSuperIntensiveDay(current, dayPlan.dayNumber))
+  }
 
   return (
     <main className="app-shell">
@@ -230,6 +277,12 @@ export function IntensivePlanScreen() {
                 <strong>{dayPlan.estimatedHours}</strong>
               </div>
               <div className="summary-card__metric">
+                <span>Выполнение дня</span>
+                <strong>
+                  {completedTaskCount} из {dayPlan.tasks.length} задач · {completionPercent}%
+                </strong>
+              </div>
+              <div className="summary-card__metric">
                 <span>Экзаменационные навыки</span>
                 <strong>{dayPlan.examSkillTargets.join(', ')}</strong>
               </div>
@@ -248,14 +301,50 @@ export function IntensivePlanScreen() {
             </div>
 
             <div className="card-stage">
-              <div className="card-stage__header">
-                <span className="card-stage__category">Задачи дня</span>
+              <div className="checklist-header">
+                <div>
+                  <span className="card-stage__category">План на день</span>
+                  <h3>{completionPercent}% выполнено</h3>
+                  <p>{completionFeedback}</p>
+                </div>
+                <button className="button button--ghost" type="button" onClick={handleResetCurrentDay}>
+                  Сбросить день
+                </button>
               </div>
-              <ul className="plan-list">
-                {dayPlan.tasks.map((task) => (
-                  <li key={task}>{task}</li>
-                ))}
-              </ul>
+              <div className="checklist-progress" aria-hidden="true">
+                <div className="checklist-progress__fill" style={{ width: `${completionPercent}%` }} />
+              </div>
+              <div className="task-list">
+                {dayPlan.tasks.map((task) => {
+                  const completed = dayProgress.completedTaskIds.includes(task.id)
+
+                  return (
+                    <label className="task-item" key={task.id}>
+                      <input
+                        className="task-item__checkbox"
+                        type="checkbox"
+                        checked={completed}
+                        onChange={(event) => handleToggleTask(task.id, event.currentTarget.checked)}
+                      />
+                      <span className="task-item__body">
+                        <span className="task-item__title">{task.title}</span>
+                        <span className="task-item__meta">
+                          {task.durationMinutes} мин · {task.type}
+                        </span>
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+              <label className="note-field">
+                <span>Заметка дня</span>
+                <textarea
+                  value={dayProgress.note}
+                  onChange={(event) => handleNoteChange(event.currentTarget.value)}
+                  placeholder="Что сегодня было самым трудным?"
+                  rows={3}
+                />
+              </label>
             </div>
 
             <div className="card-stage">
@@ -300,7 +389,7 @@ export function IntensivePlanScreen() {
                     key={day.dayNumber}
                     className={`week-chip ${selectedDay === day.dayNumber ? 'week-chip--active' : ''}`}
                     type="button"
-                    onClick={() => setSelectedDay(day.dayNumber)}
+                    onClick={() => handleSelectDay(day.dayNumber)}
                     aria-pressed={selectedDay === day.dayNumber}
                   >
                     День {day.dayNumber}
