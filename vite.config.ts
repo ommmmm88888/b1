@@ -5,4 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => ({
   base: mode === 'production' ? '/b1/' : '/',
   plugins: [react()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/testSetup.ts',
+  },
 }))

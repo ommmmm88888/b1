@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { grammarDrills, grammarTopics } from '../../data/grammarDrills'
 import { isAnswerCorrect } from '../../lib/answerCheck'
+import { applyAnswerEditForRetry } from '../../lib/answerRetryState'
+import { buildAnswerDiff, getMistakeLevel } from '../../lib/answerFeedback'
 import {
   loadGrammarProgress,
   recordGrammarAttempt,
@@ -40,7 +42,10 @@ export function GrammarDrillScreen() {
   const attempts = progress.totalAttempts
   const accuracy = attempts > 0 ? Math.round((progress.correctAnswers / attempts) * 100) : 0
   const currentMistakes = currentTask ? progress.mistakesByTaskId[currentTask.id] ?? 0 : 0
+  const mistakeLevel = getMistakeLevel(currentMistakes)
   const sessionPosition = topicTasks.length > 0 ? session.taskIndex + 1 : 0
+  const expectedAnswer = currentTask?.acceptedAnswers[0] ?? ''
+  const answerDiff = buildAnswerDiff(session.answer, expectedAnswer)
 
   useEffect(() => {
     saveGrammarProgress(progress)
@@ -79,61 +84,73 @@ export function GrammarDrillScreen() {
   return (
     <main className="app-shell">
       <div className="app-shell__grid">
-        <section className="hero-card" aria-labelledby="grammar-title">
-          <div className="hero-card__eyebrow">B1 · грамматическая точность · локальный прогресс</div>
-          <h1 id="grammar-title">Грамматические микродриллы</h1>
-          <p>
-            Короткие задания на ошибки, которые чаще всего мешают русско- и украиноязычным
-            ученикам в письме, говорении и лексико-грамматической части B1.
-          </p>
-          <div className="hero-card__meta">
+        <section className="trainer-card trainer-card--compact" aria-labelledby="grammar-title">
+          <div className="trainer-compact-status">
             <div className="pill">
               <strong>Тем:</strong>
               <span>{grammarTopics.length}</span>
             </div>
             <div className="pill">
-              <strong>Заданий:</strong>
-              <span>{grammarDrills.length}</span>
+              <strong>Тема:</strong>
+              <span>{topic.titleRu}</span>
             </div>
             <div className="pill">
               <strong>Точность:</strong>
               <span>{accuracy}%</span>
             </div>
-          </div>
-          <p className="hero-card__note">Проверка идет локально. Сервер и аккаунт не используются.</p>
-        </section>
-
-        <aside className="side-card">
-          <h2>Темы</h2>
-          <p>Выберите один блок и доведите его до стабильности короткими повторениями.</p>
-          <div className="topic-picker" role="tablist" aria-label="Темы грамматики">
-            {grammarTopics.map((item) => (
-              <button
-                className={`topic-chip ${session.topicId === item.id ? 'topic-chip--active' : ''}`}
-                type="button"
-                key={item.id}
-                onClick={() => handleSelectTopic(item.id)}
-                aria-pressed={session.topicId === item.id}
-              >
-                <span>{item.titleRu}</span>
-                <small>{getTasksByTopic(item.id).length} заданий</small>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <section className="trainer-card">
-          <div className="trainer-card__top">
-            <div>
-              <h2>{topic.titleRu}</h2>
-              <p>{topic.focusRu}</p>
+            <div className="pill">
+              <strong>Ошибок:</strong>
+              <span>{Object.values(progress.mistakesByTaskId).reduce((sum, count) => sum + count, 0)}</span>
             </div>
             <div className="pill">
-              <strong>Задание:</strong>
+              <strong>Прогресс:</strong>
               <span>
-                {sessionPosition} из {topicTasks.length}
+                {sessionPosition}/{topicTasks.length}
               </span>
             </div>
+          </div>
+          <div className="trainer-card__top">
+            <div>
+              <h1 id="grammar-title">Грамматические микродриллы</h1>
+              <p className="muted">{topic.focusRu}</p>
+            </div>
+            <details className="trainer-info-details">
+              <summary>Темы и сводка</summary>
+              <div className="trainer-info-details__content">
+                <div className="topic-picker" role="tablist" aria-label="Темы грамматики">
+                  {grammarTopics.map((item) => (
+                    <button
+                      className={`topic-chip ${session.topicId === item.id ? 'topic-chip--active' : ''}`}
+                      type="button"
+                      key={item.id}
+                      onClick={() => handleSelectTopic(item.id)}
+                      aria-pressed={session.topicId === item.id}
+                    >
+                      <span>{item.titleRu}</span>
+                      <small>{getTasksByTopic(item.id).length} заданий</small>
+                    </button>
+                  ))}
+                </div>
+                <div className="summary-card__metrics">
+                  <div className="summary-card__metric">
+                    <span>Попытки</span>
+                    <strong>{progress.totalAttempts}</strong>
+                  </div>
+                  <div className="summary-card__metric">
+                    <span>Правильные</span>
+                    <strong>{progress.correctAnswers}</strong>
+                  </div>
+                  <div className="summary-card__metric">
+                    <span>Заданий всего</span>
+                    <strong>{grammarDrills.length}</strong>
+                  </div>
+                  <div className="summary-card__metric">
+                    <span>С ошибками</span>
+                    <strong>{Object.values(progress.mistakesByTaskId).filter((count) => count > 0).length}</strong>
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
 
           <div className="progress-block">
@@ -163,7 +180,14 @@ export function GrammarDrillScreen() {
               {currentTask.answerMode === 'choice' && currentTask.choices ? (
                 <div className="choice-list" role="radiogroup" aria-label="Варианты ответа">
                   {currentTask.choices.map((choice) => (
-                    <label className="choice-item" key={choice}>
+                    <label
+                      className={`choice-item ${
+                        session.checked && !session.correct && session.answer === choice ? 'choice-item--wrong' : ''
+                      } ${
+                        session.checked && currentTask.acceptedAnswers.includes(choice) ? 'choice-item--correct' : ''
+                      }`}
+                      key={choice}
+                    >
                       <input
                         type="radio"
                         name={currentTask.id}
@@ -172,10 +196,7 @@ export function GrammarDrillScreen() {
                         onChange={(event) => {
                           const answer = event.currentTarget.value
 
-                          setSession((current) => ({
-                            ...current,
-                            answer,
-                          }))
+                          setSession((current) => applyAnswerEditForRetry(current, answer))
                         }}
                       />
                       <span>{choice}</span>
@@ -191,10 +212,7 @@ export function GrammarDrillScreen() {
                     onChange={(event) => {
                       const answer = event.target.value
 
-                      setSession((current) => ({
-                        ...current,
-                        answer,
-                      }))
+                      setSession((current) => applyAnswerEditForRetry(current, answer))
                     }}
                     placeholder="Например: nowej pracy"
                     autoComplete="off"
@@ -218,7 +236,7 @@ export function GrammarDrillScreen() {
               </div>
 
               {session.checked && session.correct !== null ? (
-                <div className="feedback">
+                <div className="feedback feedback--compact">
                   <div
                     className={`feedback__status ${
                       session.correct ? 'feedback__status--correct' : 'feedback__status--wrong'
@@ -226,9 +244,35 @@ export function GrammarDrillScreen() {
                   >
                     {session.correct ? 'Ответ верный' : 'Ответ неверный'}
                   </div>
+                  {!session.correct ? (
+                    <div className={`mistake-badge mistake-badge--${mistakeLevel.level}`}>
+                      {mistakeLevel.label}
+                    </div>
+                  ) : null}
+                  <div className="card-stage__answer">
+                    <strong>Ваш ответ:</strong> {session.answer.trim() || '—'}
+                  </div>
                   <div className="card-stage__answer">
                     <strong>Правильный ответ:</strong> {currentTask.acceptedAnswers[0]}
                   </div>
+                  {!session.correct ? (
+                    <div className="answer-diff" aria-label="Разбор различий в ответе">
+                      {answerDiff.map((chunk, index) => (
+                        <span key={`${chunk.text}-${index}`} className={`answer-diff__token answer-diff__token--${chunk.type}`}>
+                          {chunk.parts
+                            ? chunk.parts.map((part, partIndex) => (
+                                <span
+                                  key={`${part.text}-${partIndex}`}
+                                  className={part.changed ? 'answer-diff__char--changed' : undefined}
+                                >
+                                  {part.text}
+                                </span>
+                              ))
+                            : chunk.text}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                   <div className="card-stage__explanation">
                     <strong>Почему так:</strong> {currentTask.explanationRu}
                   </div>
@@ -246,29 +290,6 @@ export function GrammarDrillScreen() {
             <div className="empty-state">Для этой темы пока нет заданий.</div>
           )}
         </section>
-
-        <aside className="summary-card">
-          <h3>Сводка грамматики</h3>
-          <p>Счетчик помогает увидеть, насколько стабильно вы проходите микродриллы.</p>
-          <div className="summary-card__metrics">
-            <div className="summary-card__metric">
-              <span>Попытки</span>
-              <strong>{progress.totalAttempts}</strong>
-            </div>
-            <div className="summary-card__metric">
-              <span>Правильные</span>
-              <strong>{progress.correctAnswers}</strong>
-            </div>
-            <div className="summary-card__metric">
-              <span>Точность</span>
-              <strong>{accuracy}%</strong>
-            </div>
-            <div className="summary-card__metric">
-              <span>Заданий с ошибками</span>
-              <strong>{Object.values(progress.mistakesByTaskId).filter((count) => count > 0).length}</strong>
-            </div>
-          </div>
-        </aside>
       </div>
     </main>
   )

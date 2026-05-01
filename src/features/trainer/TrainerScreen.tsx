@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { b1Vocabulary } from '../../data/b1Vocabulary'
 import { isAnswerCorrect } from '../../lib/answerCheck'
+import { applyAnswerEditForRetry } from '../../lib/answerRetryState'
+import { buildAnswerDiff, getMistakeLevel } from '../../lib/answerFeedback'
 import {
   loadProgress,
   markDailySessionCompleted,
@@ -97,6 +99,9 @@ export function TrainerScreen() {
   const roundCompletionLabel = `${completedCount}/${session.items.length || 0}`
   const deckAccuracy = `${sessionStats.correctAnswers}/${sessionStats.attempts}`
   const currentMistakes = currentItem ? progress.mistakesByItem[currentItem.id] ?? 0 : 0
+  const mistakeLevel = getMistakeLevel(currentMistakes)
+  const expectedAnswer = currentItem?.acceptedAnswers[0] ?? ''
+  const answerDiff = buildAnswerDiff(session.answer, expectedAnswer)
 
   function handleCheck() {
     if (!currentItem || session.checked) {
@@ -163,64 +168,57 @@ export function TrainerScreen() {
   return (
     <main className="app-shell">
       <div className="app-shell__grid">
-        <section className="hero-card" aria-labelledby="app-title">
-              <div className="hero-card__eyebrow">B1 Polish Trainer · русский интерфейс · локальный прогресс</div>
-          <h1 id="app-title">B1 Polish Trainer</h1>
-          <p>
-            Минимальный рабочий тренажер для ежедневной подготовки к польскому B1: реальные
-            бытовые и экзаменационные фразы, немедленная проверка и запоминание ошибок без
-            сервера.
-          </p>
-          <div className="hero-card__meta">
-            <div className="pill">
-              <strong>Цель сессии:</strong>
-              <span>10 коротких заданий</span>
-            </div>
-            <div className="pill">
-              <strong>Сегодня завершено:</strong>
-              <span>{progress.lastSessionDate === getTodayKey() ? progress.dailyCompletedCount : 0}</span>
-            </div>
-            <div className="pill">
-              <strong>Серия:</strong>
-              <span>{progress.streak} дн.</span>
-            </div>
-          </div>
-          <p className="hero-card__note">Работает локально, прогресс сохраняется в браузере.</p>
-        </section>
-
-        <aside className="side-card">
-          <h2>Сводка</h2>
-          <p>Локально сохраняем прогресс и статистику по ошибкам в этом браузере.</p>
-          <div className="side-card__stats">
-            <div className="stat">
-              <strong>{sessionStats.attempts}</strong>
-              <div className="muted">попыток всего</div>
-            </div>
-            <div className="stat">
-              <strong>{sessionStats.correctAnswers}</strong>
-              <div className="muted">правильных ответов</div>
-            </div>
-            <div className="stat">
-              <strong>{`${Math.round(sessionStats.accuracy)}%`}</strong>
-              <div className="muted">точность</div>
-            </div>
-            <div className="stat">
-              <strong>{sessionStats.mistakeTotal}</strong>
-              <div className="muted">ошибок по карточкам</div>
-            </div>
-          </div>
-        </aside>
-
-        <section className="trainer-card">
-          <div className="trainer-card__top">
-            <div>
-              <h2>{sessionTitle}</h2>
-              <p>{sessionSubtitle}</p>
-            </div>
+        <section className="trainer-card trainer-card--compact">
+          <div className="trainer-compact-status">
             <div className="pill">
               <strong>Режим:</strong>
               <span>{session.mode === 'daily' ? 'обычный' : 'ошибки'}</span>
             </div>
+            <div className="pill">
+              <strong>Прогресс:</strong>
+              <span>{roundCompletionLabel}</span>
+            </div>
+            <div className="pill">
+              <strong>Точность:</strong>
+              <span>{`${Math.round(sessionStats.accuracy)}%`}</span>
+            </div>
+            <div className="pill">
+              <strong>Ошибок:</strong>
+              <span>{sessionStats.mistakeTotal}</span>
+            </div>
+            <div className="pill">
+              <strong>Цель:</strong>
+              <span>{SESSION_GOAL}</span>
+            </div>
+          </div>
+          <div className="trainer-card__top">
+            <div>
+              <h2>{sessionTitle}</h2>
+              <p className="muted">{sessionSubtitle}</p>
+            </div>
+            <details className="trainer-info-details">
+              <summary>Сводка и подсказки</summary>
+              <div className="trainer-info-details__content">
+                <div className="summary-card__metrics">
+                  <div className="summary-card__metric">
+                    <span>Попытки</span>
+                    <strong>{sessionStats.attempts}</strong>
+                  </div>
+                  <div className="summary-card__metric">
+                    <span>Правильные</span>
+                    <strong>{deckAccuracy}</strong>
+                  </div>
+                  <div className="summary-card__metric">
+                    <span>Карточек с ошибками</span>
+                    <strong>{sessionStats.mistakeCards}</strong>
+                  </div>
+                  <div className="summary-card__metric">
+                    <span>Серия</span>
+                    <strong>{progress.streak} дн.</strong>
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
 
           <div className="progress-block">
@@ -289,10 +287,7 @@ export function TrainerScreen() {
                     onChange={(event) => {
                       const answer = event.target.value
 
-                      setSession((current) => ({
-                        ...current,
-                        answer,
-                      }))
+                      setSession((current) => applyAnswerEditForRetry(current, answer))
                     }}
                     placeholder="Например: Muszę wziąć pod uwagę cenę"
                     autoComplete="off"
@@ -334,7 +329,7 @@ export function TrainerScreen() {
                 </div>
 
                 {session.checked && session.correct !== null ? (
-                  <div className="feedback">
+                  <div className="feedback feedback--compact">
                     <div
                       className={`feedback__status ${
                         session.correct ? 'feedback__status--correct' : 'feedback__status--wrong'
@@ -342,9 +337,35 @@ export function TrainerScreen() {
                     >
                       {session.correct ? 'Ответ верный' : 'Ответ неверный'}
                     </div>
+                    {!session.correct ? (
+                      <div className={`mistake-badge mistake-badge--${mistakeLevel.level}`}>
+                        {mistakeLevel.label}
+                      </div>
+                    ) : null}
+                    <div className="card-stage__answer">
+                      <strong>Ваш ответ:</strong> {session.answer.trim() || '—'}
+                    </div>
                     <div className="card-stage__answer">
                       <strong>Правильный ответ:</strong> {currentItem.acceptedAnswers[0]}
                     </div>
+                    {!session.correct ? (
+                      <div className="answer-diff" aria-label="Разбор различий в ответе">
+                        {answerDiff.map((chunk, index) => (
+                          <span key={`${chunk.text}-${index}`} className={`answer-diff__token answer-diff__token--${chunk.type}`}>
+                            {chunk.parts
+                              ? chunk.parts.map((part, partIndex) => (
+                                  <span
+                                    key={`${part.text}-${partIndex}`}
+                                    className={part.changed ? 'answer-diff__char--changed' : undefined}
+                                  >
+                                    {part.text}
+                                  </span>
+                                ))
+                              : chunk.text}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                     <div className="card-stage__explanation">
                       <strong>Почему так:</strong> {currentItem.explanationRu}
                     </div>
@@ -359,40 +380,6 @@ export function TrainerScreen() {
             <div className="empty-state">Сессия пуста. Начните новую практику.</div>
           )}
         </section>
-
-        <aside className="summary-card">
-          <h3>Что тренируем</h3>
-          <p>
-            Практические фразы для экзамена: просьбы, согласие/несогласие, формальные конструкции,
-            бытовые ситуации и частые ошибки русскоязычных учеников.
-          </p>
-          <div className="summary-card__metrics">
-            <div className="summary-card__metric">
-              <span>Попытки</span>
-              <strong>{sessionStats.attempts}</strong>
-            </div>
-            <div className="summary-card__metric">
-              <span>Правильные</span>
-              <strong>{deckAccuracy}</strong>
-            </div>
-            <div className="summary-card__metric">
-              <span>План на сессию</span>
-              <strong>{SESSION_GOAL}</strong>
-            </div>
-            <div className="summary-card__metric">
-              <span>Ошибочные карточки</span>
-              <strong>{sessionStats.mistakeCards}</strong>
-            </div>
-          </div>
-          <div className="summary-card__actions">
-            <button className="button button--primary" type="button" onClick={handleStartDaily}>
-              Новая дневная сессия
-            </button>
-            <button className="button" type="button" onClick={handleRepeatMistakes}>
-              Повторить ошибки
-            </button>
-          </div>
-        </aside>
       </div>
     </main>
   )
