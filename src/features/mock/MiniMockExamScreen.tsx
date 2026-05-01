@@ -49,6 +49,12 @@ export function MiniMockExamScreen() {
   )
   const objectiveTotal =
     miniMockExam.reading.questions.length + miniMockExam.grammar.length + miniMockExam.listening.questions.length
+  const checklistAnsweredCount = answers.writingCriteria.length + answers.speakingCriteria.length
+  const checklistTotal =
+    miniMockExam.writing.selfCheckCriteria.length + miniMockExam.speaking.selfCheckCriteria.length
+  const totalAnsweredCount = objectiveAnsweredCount + checklistAnsweredCount
+  const totalTaskCount = objectiveTotal + checklistTotal
+  const remainingTaskCount = totalTaskCount - totalAnsweredCount
 
   function handleFinish() {
     const nextResult = calculateMockExamResult(answers)
@@ -122,6 +128,33 @@ export function MiniMockExamScreen() {
 
   return (
     <main className="app-shell">
+      <section className="mock-sticky-bar" aria-label="Прогресс мини-мока">
+        <div className="mock-sticky-bar__stats">
+          <span className="pill">
+            <strong>Разделы:</strong>
+            <span>5 зон</span>
+          </span>
+          <span className="pill">
+            <strong>Объективные:</strong>
+            <span>
+              {objectiveAnsweredCount}/{objectiveTotal}
+            </span>
+          </span>
+          <span className="pill">
+            <strong>Всего отмечено:</strong>
+            <span>
+              {totalAnsweredCount}/{totalTaskCount}
+            </span>
+          </span>
+          <span className="pill">
+            <strong>Осталось:</strong>
+            <span>{remainingTaskCount}</span>
+          </span>
+        </div>
+        <button className="button button--primary" type="button" onClick={handleFinish}>
+          Завершить
+        </button>
+      </section>
       <div className="app-shell__grid">
         <section className="hero-card" aria-labelledby="mock-active-title">
           <div className="hero-card__eyebrow">B1 · пробный экзамен</div>
