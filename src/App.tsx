@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { GrammarDrillScreen } from './features/grammar/GrammarDrillScreen'
 import { IntensivePlanScreen } from './features/plan/IntensivePlanScreen'
 import { ListeningPracticeScreen } from './features/listening/ListeningPracticeScreen'
+import { MiniMockExamScreen } from './features/mock/MiniMockExamScreen'
 import { ReadingPracticeScreen } from './features/reading/ReadingPracticeScreen'
 import { SpeakingPracticeScreen } from './features/speaking/SpeakingPracticeScreen'
 import { TrainerScreen } from './features/trainer/TrainerScreen'
@@ -16,6 +17,7 @@ type AppMode =
   | 'speaking'
   | 'reading'
   | 'listening'
+  | 'mock'
 
 function App() {
   const [mode, setMode] = useState<AppMode>('trainer')
@@ -80,6 +82,14 @@ function App() {
           >
             Аудирование
           </button>
+          <button
+            className={`mode-switch__button ${mode === 'mock' ? 'mode-switch__button--active' : ''}`}
+            type="button"
+            onClick={() => setMode('mock')}
+            aria-pressed={mode === 'mock'}
+          >
+            Пробный экзамен
+          </button>
         </div>
       </header>
       {mode === 'trainer' ? <TrainerScreen /> : null}
@@ -89,6 +99,7 @@ function App() {
       {mode === 'speaking' ? <SpeakingPracticeScreen /> : null}
       {mode === 'reading' ? <ReadingPracticeScreen /> : null}
       {mode === 'listening' ? <ListeningPracticeScreen /> : null}
+      {mode === 'mock' ? <MiniMockExamScreen /> : null}
     </>
   )
 }
