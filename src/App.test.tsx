@@ -16,7 +16,8 @@ describe('App navigation', () => {
     render(<App />)
 
     expect(screen.getByRole('navigation', { name: 'Основные разделы' })).toBeInTheDocument()
-    expect(screen.getByText('Синхронизация не настроена')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Google вход' })).toBeInTheDocument()
+    expect(screen.getByText('не настроено')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Тренировка' })).toHaveAttribute('aria-pressed', 'true')
 
     await user.click(screen.getByRole('button', { name: 'Пробный экзамен' }))

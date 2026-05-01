@@ -15,13 +15,28 @@ export function AccountSyncControl() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [status, setStatus] = useState<SyncStatus>(isFirebaseConfigured ? 'idle' : 'unavailable')
   const [message, setMessage] = useState('')
+  const [showSetupInfo, setShowSetupInfo] = useState(false)
 
   useEffect(() => subscribeAuthState(setUser), [])
 
   if (!isFirebaseConfigured) {
     return (
       <div className="account-sync account-sync--disabled" aria-label="Синхронизация">
-        <span>Синхронизация не настроена</span>
+        <button
+          className="account-sync__button account-sync__button--setup"
+          type="button"
+          onClick={() => setShowSetupInfo((current) => !current)}
+          aria-expanded={showSetupInfo}
+          aria-controls="firebase-sync-setup-note"
+        >
+          Google вход
+        </button>
+        <span className="account-sync__status">не настроено</span>
+        {showSetupInfo ? (
+          <span className="account-sync__setup-note" id="firebase-sync-setup-note">
+            Синхронизация между устройствами появится после настройки Firebase.
+          </span>
+        ) : null}
       </div>
     )
   }
