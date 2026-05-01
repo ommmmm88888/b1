@@ -9,6 +9,7 @@ export function normalizePolishAnswer(value: string): string {
     .replaceAll('[', ' ')
     .replaceAll(']', ' ')
     .replace(whitespacePattern, ' ')
+    .trim()
 }
 
 export function isAnswerCorrect(candidate: string, acceptedAnswers: string[]): boolean {
