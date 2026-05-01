@@ -286,12 +286,14 @@ export function TrainerScreen() {
                   <input
                     id="answer"
                     value={session.answer}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const answer = event.target.value
+
                       setSession((current) => ({
                         ...current,
-                        answer: event.target.value,
+                        answer,
                       }))
-                    }
+                    }}
                     placeholder="Например: Muszę wziąć pod uwagę cenę"
                     autoComplete="off"
                     spellCheck={false}

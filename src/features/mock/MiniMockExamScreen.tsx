@@ -239,12 +239,14 @@ export function MiniMockExamScreen() {
                   className="task-item__checkbox"
                   type="checkbox"
                   checked={answers.writingCriteria.includes(criterion)}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked
+
                     setAnswers((current) => ({
                       ...current,
-                      writingCriteria: toggleValue(current.writingCriteria, criterion, event.currentTarget.checked),
+                      writingCriteria: toggleValue(current.writingCriteria, criterion, checked),
                     }))
-                  }
+                  }}
                 />
                 <span className="task-item__body">
                   <span className="task-item__title">{criterion}</span>
@@ -276,12 +278,14 @@ export function MiniMockExamScreen() {
                   className="task-item__checkbox"
                   type="checkbox"
                   checked={answers.speakingCriteria.includes(criterion)}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const checked = event.currentTarget.checked
+
                     setAnswers((current) => ({
                       ...current,
-                      speakingCriteria: toggleValue(current.speakingCriteria, criterion, event.currentTarget.checked),
+                      speakingCriteria: toggleValue(current.speakingCriteria, criterion, checked),
                     }))
-                  }
+                  }}
                 />
                 <span className="task-item__body">
                   <span className="task-item__title">{criterion}</span>

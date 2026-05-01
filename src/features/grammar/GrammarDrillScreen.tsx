@@ -169,12 +169,14 @@ export function GrammarDrillScreen() {
                         name={currentTask.id}
                         value={choice}
                         checked={session.answer === choice}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          const answer = event.currentTarget.value
+
                           setSession((current) => ({
                             ...current,
-                            answer: event.currentTarget.value,
+                            answer,
                           }))
-                        }
+                        }}
                       />
                       <span>{choice}</span>
                     </label>
@@ -186,12 +188,14 @@ export function GrammarDrillScreen() {
                   <input
                     id="grammar-answer"
                     value={session.answer}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const answer = event.target.value
+
                       setSession((current) => ({
                         ...current,
-                        answer: event.target.value,
+                        answer,
                       }))
-                    }
+                    }}
                     placeholder="Например: nowej pracy"
                     autoComplete="off"
                     spellCheck={false}

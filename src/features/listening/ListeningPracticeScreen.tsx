@@ -161,12 +161,14 @@ export function ListeningPracticeScreen() {
                           name={question.id}
                           value={option}
                           checked={answers[question.id] === option}
-                          onChange={(event) =>
+                          onChange={(event) => {
+                            const answer = event.currentTarget.value
+
                             setAnswers((current) => ({
                               ...current,
-                              [question.id]: event.currentTarget.value,
+                              [question.id]: answer,
                             }))
-                          }
+                          }}
                         />
                         <span>{option}</span>
                       </label>
