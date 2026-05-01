@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { GrammarDrillScreen } from './features/grammar/GrammarDrillScreen'
 import { IntensivePlanScreen } from './features/plan/IntensivePlanScreen'
+import { SpeakingPracticeScreen } from './features/speaking/SpeakingPracticeScreen'
 import { TrainerScreen } from './features/trainer/TrainerScreen'
 import { WritingPracticeScreen } from './features/writing/WritingPracticeScreen'
 import './App.css'
 
-type AppMode = 'trainer' | 'intensive' | 'grammar' | 'writing'
+type AppMode = 'trainer' | 'intensive' | 'grammar' | 'writing' | 'speaking'
 
 function App() {
   const [mode, setMode] = useState<AppMode>('trainer')
@@ -46,12 +47,21 @@ function App() {
           >
             Письмо
           </button>
+          <button
+            className={`mode-switch__button ${mode === 'speaking' ? 'mode-switch__button--active' : ''}`}
+            type="button"
+            onClick={() => setMode('speaking')}
+            aria-pressed={mode === 'speaking'}
+          >
+            Говорение
+          </button>
         </div>
       </header>
       {mode === 'trainer' ? <TrainerScreen /> : null}
       {mode === 'intensive' ? <IntensivePlanScreen /> : null}
       {mode === 'grammar' ? <GrammarDrillScreen /> : null}
       {mode === 'writing' ? <WritingPracticeScreen /> : null}
+      {mode === 'speaking' ? <SpeakingPracticeScreen /> : null}
     </>
   )
 }
