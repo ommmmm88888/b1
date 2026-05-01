@@ -5,6 +5,7 @@ import { ListeningPracticeScreen } from './features/listening/ListeningPracticeS
 import { MiniMockExamScreen } from './features/mock/MiniMockExamScreen'
 import { ReadingPracticeScreen } from './features/reading/ReadingPracticeScreen'
 import { SpeakingPracticeScreen } from './features/speaking/SpeakingPracticeScreen'
+import { AccountSyncControl } from './features/sync/AccountSyncControl'
 import { TrainerScreen } from './features/trainer/TrainerScreen'
 import { WritingPracticeScreen } from './features/writing/WritingPracticeScreen'
 import './App.css'
@@ -36,19 +37,22 @@ function App() {
   return (
     <>
       <header className="mode-switch">
-        <nav className="mode-switch__inner" aria-label="Основные разделы">
-          {modes.map((item) => (
-            <button
-              className={`mode-switch__button ${mode === item.id ? 'mode-switch__button--active' : ''}`}
-              type="button"
-              key={item.id}
-              onClick={() => setMode(item.id)}
-              aria-pressed={mode === item.id}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
+        <div className="mode-switch__bar">
+          <nav className="mode-switch__inner" aria-label="Основные разделы">
+            {modes.map((item) => (
+              <button
+                className={`mode-switch__button ${mode === item.id ? 'mode-switch__button--active' : ''}`}
+                type="button"
+                key={item.id}
+                onClick={() => setMode(item.id)}
+                aria-pressed={mode === item.id}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+          <AccountSyncControl />
+        </div>
       </header>
       {mode === 'trainer' ? <TrainerScreen /> : null}
       {mode === 'intensive' ? <IntensivePlanScreen /> : null}

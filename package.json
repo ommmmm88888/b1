@@ -12,6 +12,7 @@
     "verify": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
+    "firebase": "^12.12.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
