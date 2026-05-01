@@ -145,7 +145,8 @@ export function ListeningPracticeScreen() {
 
           <div className="task-list">
             {selectedTask.comprehensionQuestions.map((question, index) => {
-              const isCorrect = answers[question.id] === question.correctAnswer
+              const selectedAnswer = answers[question.id]
+              const isCorrect = selectedAnswer === question.correctAnswer
 
               return (
                 <div className="card-stage" key={question.id}>
@@ -155,7 +156,14 @@ export function ListeningPracticeScreen() {
                   </div>
                   <div className="choice-list" role="radiogroup" aria-label={question.promptRu}>
                     {question.options.map((option) => (
-                      <label className="choice-item" key={option}>
+                      <label
+                        className={`choice-item ${
+                          checked && selectedAnswer === option && option !== question.correctAnswer
+                            ? 'choice-item--wrong'
+                            : ''
+                        } ${checked && option === question.correctAnswer ? 'choice-item--correct' : ''}`}
+                        key={option}
+                      >
                         <input
                           type="radio"
                           name={question.id}
@@ -175,12 +183,23 @@ export function ListeningPracticeScreen() {
                     ))}
                   </div>
                   {checked ? (
-                    <div
-                      className={`feedback__status ${
-                        isCorrect ? 'feedback__status--correct' : 'feedback__status--wrong'
-                      }`}
-                    >
-                      {isCorrect ? 'Ответ верный' : `Правильно: ${question.correctAnswer}`}
+                    <div className="feedback feedback--compact">
+                      <div
+                        className={`feedback__status ${
+                          isCorrect ? 'feedback__status--correct' : 'feedback__status--wrong'
+                        }`}
+                      >
+                        {isCorrect ? 'Ответ верный' : 'Ответ неверный'}
+                      </div>
+                      <div className="card-stage__answer">
+                        <strong>Ваш ответ:</strong> {selectedAnswer ?? '—'}
+                      </div>
+                      <div className="card-stage__answer">
+                        <strong>Правильный ответ:</strong> {question.correctAnswer}
+                      </div>
+                      <div className="card-stage__explanation">
+                        <strong>Пояснение:</strong> {selectedTask.explanationRu}
+                      </div>
                     </div>
                   ) : null}
                 </div>

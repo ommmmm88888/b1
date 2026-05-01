@@ -109,7 +109,8 @@ export function ReadingPracticeScreen() {
 
           <div className="task-list">
             {selectedTask.questions.map((question, index) => {
-              const isCorrect = answers[question.id] === question.correctAnswer
+              const selectedAnswer = answers[question.id]
+              const isCorrect = selectedAnswer === question.correctAnswer
 
               return (
                 <div className="card-stage" key={question.id}>
@@ -121,7 +122,14 @@ export function ReadingPracticeScreen() {
                   </div>
                   <div className="choice-list" role="radiogroup" aria-label={question.promptRu}>
                     {question.options.map((option) => (
-                      <label className="choice-item" key={option}>
+                      <label
+                        className={`choice-item ${
+                          checked && selectedAnswer === option && option !== question.correctAnswer
+                            ? 'choice-item--wrong'
+                            : ''
+                        } ${checked && option === question.correctAnswer ? 'choice-item--correct' : ''}`}
+                        key={option}
+                      >
                         <input
                           type="radio"
                           name={question.id}
@@ -141,13 +149,16 @@ export function ReadingPracticeScreen() {
                     ))}
                   </div>
                   {checked ? (
-                    <div className="feedback">
+                    <div className="feedback feedback--compact">
                       <div
                         className={`feedback__status ${
                           isCorrect ? 'feedback__status--correct' : 'feedback__status--wrong'
                         }`}
                       >
                         {isCorrect ? 'Ответ верный' : 'Ответ неверный'}
+                      </div>
+                      <div className="card-stage__answer">
+                        <strong>Ваш ответ:</strong> {selectedAnswer ?? '—'}
                       </div>
                       <div className="card-stage__answer">
                         <strong>Правильный ответ:</strong> {question.correctAnswer}
