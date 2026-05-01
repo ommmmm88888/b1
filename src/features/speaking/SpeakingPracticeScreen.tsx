@@ -78,169 +78,149 @@ export function SpeakingPracticeScreen() {
   return (
     <main className="app-shell">
       <div className="app-shell__grid">
-        <section className="hero-card" aria-labelledby="speaking-title">
-          <div className="hero-card__eyebrow">B1 · говорение · экзаменационный формат</div>
-          <h1 id="speaking-title">Практика говорения</h1>
-          <p>
-            Короткие устные задания переводят бытовой и рабочий польский в формат экзамена:
-            структура ответа, аргументация, сравнение, диалог и самопроверка.
-          </p>
-          <div className="hero-card__meta">
-            <div className="pill">
-              <strong>Заданий:</strong>
-              <span>{speakingPrompts.length}</span>
-            </div>
-            <div className="pill">
-              <strong>Выполнено:</strong>
-              <span>{progress.completedPromptIds.length}</span>
-            </div>
-            <div className="pill">
-              <strong>Прогресс:</strong>
-              <span>{completionPercent}%</span>
-            </div>
-          </div>
-          <p className="hero-card__note">Запись микрофона не требуется. Отмечайте выполненные ответы вручную.</p>
-        </section>
-
-        <aside className="side-card">
-          <h2>Тип задания</h2>
-          <p>Выберите формат, затем проговорите ответ по трехшаговому плану.</p>
-          <div className="topic-picker" role="tablist" aria-label="Типы заданий на говорение">
-            {speakingTypes.map((type) => (
-              <button
-                className={`topic-chip ${selectedType === type ? 'topic-chip--active' : ''}`}
-                type="button"
-                key={type}
-                onClick={() => handleSelectType(type)}
-                aria-pressed={selectedType === type}
-              >
-                <span>{speakingTypeLabels[type]}</span>
-                <small>{speakingPrompts.filter((prompt) => prompt.type === type).length} заданий</small>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <section className="trainer-card">
+        <section className="trainer-card trainer-card--compact" aria-labelledby="speaking-title">
           <div className="trainer-card__top">
             <div>
-              <h2>{selectedPrompt.titleRu}</h2>
+              <div className="hero-card__eyebrow">B1 · говорение · таймер и план</div>
+              <h1 id="speaking-title">{selectedPrompt.titleRu}</h1>
               <p>{selectedPrompt.situationRu}</p>
             </div>
-            <div className="pill">
-              <strong>Тип:</strong>
-              <span>{speakingTypeLabels[selectedPrompt.type]}</span>
+            <div className="trainer-compact-status" aria-label="Статус говорения">
+              <span className="pill">
+                <strong>Тип:</strong>
+                <span>{speakingTypeLabels[selectedPrompt.type]}</span>
+              </span>
+              <span className="pill">
+                <strong>Цель:</strong>
+                <span>{selectedPrompt.minimumAnswerGoal}</span>
+              </span>
+              <span className="pill">
+                <strong>Прогресс:</strong>
+                <span>{completionPercent}%</span>
+              </span>
+              <span className="pill">
+                <strong>Статус:</strong>
+                <span>{completed ? 'выполнено' : 'не выполнено'}</span>
+              </span>
             </div>
           </div>
 
-          <div className="progress-block">
-            <div className="progress-label">
-              <span>Общий прогресс говорения</span>
-              <span>{completionPercent}%</span>
-            </div>
-            <div className="progress-bar" aria-hidden="true">
-              <div className="progress-bar__fill" style={{ width: `${completionPercent}%` }} />
-            </div>
-          </div>
-
-          <div className="button-row">
-            {promptsByType.map((prompt) => (
-              <button
-                className={`button ${prompt.id === selectedPrompt.id ? 'button--primary' : ''}`}
-                type="button"
-                key={prompt.id}
-                onClick={() => {
-                  setSelectedPromptId(prompt.id)
-                  setTimerRunning(false)
-                }}
-              >
-                {prompt.titleRu}
-              </button>
-            ))}
-          </div>
-
-          <div className="card-stage">
-            <div className="card-stage__header">
-              <span className="card-stage__category">Задание</span>
-              <p className="card-stage__prompt">{selectedPrompt.promptPl}</p>
-            </div>
-            <div className="summary-card__metrics">
-              <div className="summary-card__metric">
-                <span>Цель ответа</span>
-                <strong>{selectedPrompt.minimumAnswerGoal}</strong>
+          <details className="practice-help-details">
+            <summary>Выбрать тип и другое устное задание</summary>
+            <div className="practice-help-details__content">
+              <div className="topic-picker" role="tablist" aria-label="Типы заданий на говорение">
+                {speakingTypes.map((type) => (
+                  <button
+                    className={`topic-chip ${selectedType === type ? 'topic-chip--active' : ''}`}
+                    type="button"
+                    key={type}
+                    onClick={() => handleSelectType(type)}
+                    aria-pressed={selectedType === type}
+                  >
+                    <span>{speakingTypeLabels[type]}</span>
+                    <small>{speakingPrompts.filter((prompt) => prompt.type === type).length} заданий</small>
+                  </button>
+                ))}
               </div>
-              <div className="summary-card__metric">
-                <span>Статус</span>
-                <strong>{completed ? 'выполнено' : 'не выполнено'}</strong>
+              <div className="button-row">
+                {promptsByType.map((prompt) => (
+                  <button
+                    className={`button ${prompt.id === selectedPrompt.id ? 'button--primary' : ''}`}
+                    type="button"
+                    key={prompt.id}
+                    onClick={() => {
+                      setSelectedPromptId(prompt.id)
+                      setTimerRunning(false)
+                    }}
+                  >
+                    {prompt.titleRu}
+                  </button>
+                ))}
               </div>
             </div>
+          </details>
+
+          <div className="speaking-flow">
+            <section className="card-stage" aria-labelledby="speaking-prompt-title">
+              <div className="card-stage__header">
+                <span className="card-stage__category">1. Prompt</span>
+                <h2 id="speaking-prompt-title">Задание</h2>
+                <p className="card-stage__prompt">{selectedPrompt.promptPl}</p>
+              </div>
+            </section>
+
+            <section className="card-stage" aria-labelledby="speaking-timer-title">
+              <div className="card-stage__header">
+                <span className="card-stage__category">2. Таймер</span>
+                <h2 id="speaking-timer-title">
+                  {timerMode === 'prep' ? 'Подготовка' : 'Ответ'} · {formatTime(secondsLeft)}
+                </h2>
+              </div>
+              <div className="button-row">
+                <button className="button" type="button" onClick={() => handleTimerStart('prep')}>
+                  30 сек подготовка
+                </button>
+                <button className="button button--primary" type="button" onClick={() => handleTimerStart('answer')}>
+                  90 сек ответ
+                </button>
+                <button className="button button--ghost" type="button" onClick={() => setTimerRunning(false)}>
+                  Пауза
+                </button>
+              </div>
+            </section>
+
+            <section className="card-stage" aria-labelledby="speaking-plan-title">
+              <div className="card-stage__header">
+                <span className="card-stage__category">3. План</span>
+                <h2 id="speaking-plan-title">Ответ из трёх частей</h2>
+              </div>
+              <ol className="plan-list">
+                {selectedPrompt.answerPlanRu.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            </section>
+
+            <section className="card-stage" aria-labelledby="speaking-check-title">
+              <div className="card-stage__header">
+                <span className="card-stage__category">4. Самопроверка</span>
+                <h2 id="speaking-check-title">После ответа</h2>
+              </div>
+              <ul className="plan-list">
+                {selectedPrompt.selfCheckCriteria.map((criterion) => (
+                  <li key={criterion}>{criterion}</li>
+                ))}
+              </ul>
+              <div className="button-row">
+                <button className="button button--primary" type="button" onClick={handleCompleted}>
+                  {completed ? 'Снять отметку' : 'Отметить как выполнено'}
+                </button>
+              </div>
+            </section>
           </div>
 
-          <div className="card-stage">
-            <div className="card-stage__header">
-              <span className="card-stage__category">Таймер</span>
-              <p className="card-stage__prompt">
-                {timerMode === 'prep' ? 'Подготовка' : 'Ответ'} · {formatTime(secondsLeft)}
-              </p>
+          <details className="practice-help-details">
+            <summary>Фразы и частые ошибки</summary>
+            <div className="practice-help-details__content practice-help-details__content--grid">
+              <div className="card-stage__hint">
+                <strong>Полезные фразы:</strong>
+                <ul className="plan-list">
+                  {selectedPrompt.usefulPhrasesPl.map((phrase) => (
+                    <li key={phrase}>{phrase}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="card-stage__hint">
+                <strong>Частые ошибки:</strong>
+                <ul className="plan-list">
+                  {selectedPrompt.commonMistakesRu.map((mistake) => (
+                    <li key={mistake}>{mistake}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <div className="button-row">
-              <button className="button" type="button" onClick={() => handleTimerStart('prep')}>
-                30 сек подготовка
-              </button>
-              <button className="button button--primary" type="button" onClick={() => handleTimerStart('answer')}>
-                90 сек ответ
-              </button>
-              <button className="button button--ghost" type="button" onClick={() => setTimerRunning(false)}>
-                Пауза
-              </button>
-            </div>
-          </div>
-
-          <div className="card-stage">
-            <div className="card-stage__header">
-              <span className="card-stage__category">План ответа</span>
-            </div>
-            <ol className="plan-list">
-              {selectedPrompt.answerPlanRu.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          </div>
-
-          <div className="button-row">
-            <button className="button button--primary" type="button" onClick={handleCompleted}>
-              {completed ? 'Снять отметку' : 'Отметить как выполнено'}
-            </button>
-          </div>
+          </details>
         </section>
-
-        <aside className="summary-card">
-          <h3>Опоры для ответа</h3>
-          <div className="card-stage__hint">
-            <strong>Полезные фразы:</strong>
-            <ul className="plan-list">
-              {selectedPrompt.usefulPhrasesPl.map((phrase) => (
-                <li key={phrase}>{phrase}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="card-stage__hint">
-            <strong>Самопроверка:</strong>
-            <ul className="plan-list">
-              {selectedPrompt.selfCheckCriteria.map((criterion) => (
-                <li key={criterion}>{criterion}</li>
-              ))}
-            </ul>
-          </div>
-          <div className="card-stage__hint">
-            <strong>Частые ошибки:</strong>
-            <ul className="plan-list">
-              {selectedPrompt.commonMistakesRu.map((mistake) => (
-                <li key={mistake}>{mistake}</li>
-              ))}
-            </ul>
-          </div>
-        </aside>
       </div>
     </main>
   )
