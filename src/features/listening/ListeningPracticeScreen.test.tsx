@@ -19,13 +19,20 @@ describe('ListeningPracticeScreen', () => {
     const correctAnswer = screen.getByRole('radio', { name: 'do lekarza rodzinnego' })
 
     await user.click(wrongAnswer)
+
+    expect(wrongAnswer).toHaveAttribute('aria-checked', 'true')
+    expect(wrongAnswer.closest('label')).toHaveClass('choice-item--selected')
+    expect(wrongAnswer.closest('label')).toHaveTextContent('Выбрано')
+
     await user.click(screen.getByRole('radio', { name: 'po godzinie szesnastej' }))
     await user.click(screen.getByRole('radio', { name: 'gorączka i kaszel' }))
 
     await user.click(screen.getByRole('button', { name: 'Проверить' }))
 
     expect(wrongAnswer.closest('label')).toHaveClass('choice-item--wrong')
+    expect(wrongAnswer.closest('label')).toHaveTextContent('Ваш выбор')
     expect(correctAnswer.closest('label')).toHaveClass('choice-item--correct')
+    expect(correctAnswer.closest('label')).toHaveTextContent('Правильный ответ')
     expect(screen.getAllByText('Ответ неверный')).toHaveLength(1)
     expect(screen.getAllByText('Ваш ответ:').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Правильный ответ:').length).toBeGreaterThan(0)

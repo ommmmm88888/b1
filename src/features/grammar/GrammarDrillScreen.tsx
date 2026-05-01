@@ -179,29 +179,46 @@ export function GrammarDrillScreen() {
 
               {currentTask.answerMode === 'choice' && currentTask.choices ? (
                 <div className="choice-list" role="radiogroup" aria-label="Варианты ответа">
-                  {currentTask.choices.map((choice) => (
-                    <label
-                      className={`choice-item ${
-                        session.checked && !session.correct && session.answer === choice ? 'choice-item--wrong' : ''
-                      } ${
-                        session.checked && currentTask.acceptedAnswers.includes(choice) ? 'choice-item--correct' : ''
-                      }`}
-                      key={choice}
-                    >
-                      <input
-                        type="radio"
-                        name={currentTask.id}
-                        value={choice}
-                        checked={session.answer === choice}
-                        onChange={(event) => {
-                          const answer = event.currentTarget.value
+                  {currentTask.choices.map((choice) => {
+                    const isSelected = session.answer === choice
+                    const isCorrectChoice = currentTask.acceptedAnswers.includes(choice)
+                    const isWrongSelection = session.checked && !session.correct && isSelected
 
-                          setSession((current) => applyAnswerEditForRetry(current, answer))
-                        }}
-                      />
-                      <span>{choice}</span>
-                    </label>
-                  ))}
+                    return (
+                      <label
+                        className={`choice-item ${isSelected ? 'choice-item--selected' : ''} ${
+                          isWrongSelection ? 'choice-item--wrong' : ''
+                        } ${session.checked && isCorrectChoice ? 'choice-item--correct' : ''}`}
+                        key={choice}
+                      >
+                        <input
+                          type="radio"
+                          name={currentTask.id}
+                          value={choice}
+                          checked={isSelected}
+                          aria-checked={isSelected}
+                          onChange={(event) => {
+                            const answer = event.currentTarget.value
+
+                            setSession((current) => applyAnswerEditForRetry(current, answer))
+                          }}
+                        />
+                        <span className="choice-item__text">{choice}</span>
+                        <span className="choice-item__badges" aria-hidden="true">
+                          {isSelected ? (
+                            <span className="choice-item__badge choice-item__badge--selected">
+                              {isWrongSelection ? 'Ваш выбор' : 'Выбрано'}
+                            </span>
+                          ) : null}
+                          {session.checked && isCorrectChoice ? (
+                            <span className="choice-item__badge choice-item__badge--correct">
+                              Правильный ответ
+                            </span>
+                          ) : null}
+                        </span>
+                      </label>
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="input-row">

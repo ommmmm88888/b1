@@ -121,32 +121,50 @@ export function ReadingPracticeScreen() {
                     <p className="card-stage__prompt">{question.promptRu}</p>
                   </div>
                   <div className="choice-list" role="radiogroup" aria-label={question.promptRu}>
-                    {question.options.map((option) => (
-                      <label
-                        className={`choice-item ${
-                          checked && selectedAnswer === option && option !== question.correctAnswer
-                            ? 'choice-item--wrong'
-                            : ''
-                        } ${checked && option === question.correctAnswer ? 'choice-item--correct' : ''}`}
-                        key={option}
-                      >
-                        <input
-                          type="radio"
-                          name={question.id}
-                          value={option}
-                          checked={answers[question.id] === option}
-                          onChange={(event) => {
-                            const answer = event.currentTarget.value
+                    {question.options.map((option) => {
+                      const isSelected = selectedAnswer === option
+                      const isCorrectOption = option === question.correctAnswer
+                      const isWrongSelection = checked && isSelected && !isCorrectOption
 
-                            setAnswers((current) => ({
-                              ...current,
-                              [question.id]: answer,
-                            }))
-                          }}
-                        />
-                        <span>{option}</span>
-                      </label>
-                    ))}
+                      return (
+                        <label
+                          className={`choice-item ${isSelected ? 'choice-item--selected' : ''} ${
+                            isWrongSelection ? 'choice-item--wrong' : ''
+                          } ${checked && isCorrectOption ? 'choice-item--correct' : ''}`}
+                          key={option}
+                        >
+                          <input
+                            type="radio"
+                            name={question.id}
+                            value={option}
+                            checked={isSelected}
+                            aria-checked={isSelected}
+                            onChange={(event) => {
+                              const answer = event.currentTarget.value
+
+                              setAnswers((current) => ({
+                                ...current,
+                                [question.id]: answer,
+                              }))
+                              setChecked(false)
+                            }}
+                          />
+                          <span className="choice-item__text">{option}</span>
+                          <span className="choice-item__badges" aria-hidden="true">
+                            {isSelected ? (
+                              <span className="choice-item__badge choice-item__badge--selected">
+                                {isWrongSelection ? 'Ваш выбор' : 'Выбрано'}
+                              </span>
+                            ) : null}
+                            {checked && isCorrectOption ? (
+                              <span className="choice-item__badge choice-item__badge--correct">
+                                Правильный ответ
+                              </span>
+                            ) : null}
+                          </span>
+                        </label>
+                      )
+                    })}
                   </div>
                   {checked ? (
                     <div className="feedback feedback--compact">

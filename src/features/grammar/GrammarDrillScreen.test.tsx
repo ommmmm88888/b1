@@ -64,22 +64,33 @@ describe('GrammarDrillScreen retry-after-error UX', () => {
     expect(screen.getByRole('radiogroup', { name: 'Варианты ответа' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: 'były' }))
+
+    expect(screen.getByRole('radio', { name: 'były' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByRole('radio', { name: 'były' }).closest('label')).toHaveClass('choice-item--selected')
+    expect(screen.getByRole('radio', { name: 'były' }).closest('label')).toHaveTextContent('Выбрано')
+
     await user.click(checkButton)
 
     expect(screen.getByText('Ответ неверный')).toBeInTheDocument()
     expect(screen.getByText('новая ошибка')).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: 'były' }).closest('label')).toHaveClass('choice-item--wrong')
+    expect(screen.getByRole('radio', { name: 'były' }).closest('label')).toHaveTextContent('Ваш выбор')
     expect(screen.getByRole('radio', { name: 'byli' }).closest('label')).toHaveClass('choice-item--correct')
+    expect(screen.getByRole('radio', { name: 'byli' }).closest('label')).toHaveTextContent('Правильный ответ')
     expect(checkButton).toBeDisabled()
 
     await user.click(screen.getByRole('radio', { name: 'byli' }))
 
     expect(checkButton).toBeEnabled()
     expect(screen.queryByText('Ответ неверный')).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'byli' }).closest('label')).toHaveClass('choice-item--selected')
+    expect(screen.getByRole('radio', { name: 'byli' }).closest('label')).toHaveTextContent('Выбрано')
 
     await user.click(checkButton)
 
     expect(screen.getByText('Ответ верный')).toBeInTheDocument()
     expect(screen.queryByText('Ответ неверный')).not.toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'byli' }).closest('label')).toHaveClass('choice-item--correct')
+    expect(screen.getByRole('radio', { name: 'byli' }).closest('label')).toHaveTextContent('Правильный ответ')
   })
 })
