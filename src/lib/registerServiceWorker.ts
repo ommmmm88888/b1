@@ -5,7 +5,23 @@ export async function registerServiceWorker(): Promise<void> {
 
   const scriptUrl = new URL('sw.js', import.meta.env.BASE_URL).toString()
 
-  await navigator.serviceWorker.register(scriptUrl, {
-    scope: import.meta.env.BASE_URL,
+  const register = () =>
+    navigator.serviceWorker.register(scriptUrl, {
+      scope: import.meta.env.BASE_URL,
+    })
+
+  if (document.readyState === 'complete') {
+    await register()
+    return
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    window.addEventListener(
+      'load',
+      () => {
+        register().then(() => resolve(), reject)
+      },
+      { once: true },
+    )
   })
 }

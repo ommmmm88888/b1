@@ -10,6 +10,17 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator && window.location.pathname.startsWith('/b1/')) {
+        window.addEventListener(
+          'load',
+          () => {
+            navigator.serviceWorker.register('/b1/sw.js', { scope: '/b1/' }).catch(() => {})
+          },
+          { once: true },
+        )
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
