@@ -541,6 +541,11 @@
   gap: 10px;
 }
 
+.topic-picker {
+  display: grid;
+  gap: 10px;
+}
+
 .plan-type-switch {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -569,6 +574,53 @@
   border-color: rgba(56, 189, 248, 0.55);
   background: rgba(30, 41, 59, 0.96);
   color: #f8fafc;
+}
+
+.topic-chip {
+  appearance: none;
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  min-height: 56px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.topic-chip small {
+  color: #94a3b8;
+}
+
+.topic-chip--active {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(30, 41, 59, 0.96);
+  color: #f8fafc;
+}
+
+.choice-list {
+  display: grid;
+  gap: 10px;
+}
+
+.choice-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(2, 6, 23, 0.36);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.choice-item input {
+  width: 18px;
+  height: 18px;
+  accent-color: #38bdf8;
 }
 
 .day-chip {
@@ -614,7 +666,7 @@
   .mode-switch__inner {
     display: grid;
     width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .hero-card,

@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { GrammarDrillScreen } from './features/grammar/GrammarDrillScreen'
 import { IntensivePlanScreen } from './features/plan/IntensivePlanScreen'
 import { TrainerScreen } from './features/trainer/TrainerScreen'
 import './App.css'
 
-type AppMode = 'trainer' | 'intensive'
+type AppMode = 'trainer' | 'intensive' | 'grammar'
 
 function App() {
   const [mode, setMode] = useState<AppMode>('trainer')
@@ -28,9 +29,19 @@ function App() {
           >
             Интенсив
           </button>
+          <button
+            className={`mode-switch__button ${mode === 'grammar' ? 'mode-switch__button--active' : ''}`}
+            type="button"
+            onClick={() => setMode('grammar')}
+            aria-pressed={mode === 'grammar'}
+          >
+            Грамматика
+          </button>
         </div>
       </header>
-      {mode === 'trainer' ? <TrainerScreen /> : <IntensivePlanScreen />}
+      {mode === 'trainer' ? <TrainerScreen /> : null}
+      {mode === 'intensive' ? <IntensivePlanScreen /> : null}
+      {mode === 'grammar' ? <GrammarDrillScreen /> : null}
     </>
   )
 }
