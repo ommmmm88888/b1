@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { GrammarDrillScreen } from './features/grammar/GrammarDrillScreen'
 import { IntensivePlanScreen } from './features/plan/IntensivePlanScreen'
+import { ReadingPracticeScreen } from './features/reading/ReadingPracticeScreen'
 import { SpeakingPracticeScreen } from './features/speaking/SpeakingPracticeScreen'
 import { TrainerScreen } from './features/trainer/TrainerScreen'
 import { WritingPracticeScreen } from './features/writing/WritingPracticeScreen'
 import './App.css'
 
-type AppMode = 'trainer' | 'intensive' | 'grammar' | 'writing' | 'speaking'
+type AppMode = 'trainer' | 'intensive' | 'grammar' | 'writing' | 'speaking' | 'reading'
 
 function App() {
   const [mode, setMode] = useState<AppMode>('trainer')
@@ -55,6 +56,14 @@ function App() {
           >
             Говорение
           </button>
+          <button
+            className={`mode-switch__button ${mode === 'reading' ? 'mode-switch__button--active' : ''}`}
+            type="button"
+            onClick={() => setMode('reading')}
+            aria-pressed={mode === 'reading'}
+          >
+            Чтение
+          </button>
         </div>
       </header>
       {mode === 'trainer' ? <TrainerScreen /> : null}
@@ -62,6 +71,7 @@ function App() {
       {mode === 'grammar' ? <GrammarDrillScreen /> : null}
       {mode === 'writing' ? <WritingPracticeScreen /> : null}
       {mode === 'speaking' ? <SpeakingPracticeScreen /> : null}
+      {mode === 'reading' ? <ReadingPracticeScreen /> : null}
     </>
   )
 }

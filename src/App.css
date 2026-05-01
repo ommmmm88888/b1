@@ -623,6 +623,13 @@
   accent-color: #38bdf8;
 }
 
+.reading-text {
+  margin: 0;
+  color: #e2e8f0;
+  line-height: 1.75;
+  font-size: 1rem;
+}
+
 .day-chip {
   display: grid;
   gap: 3px;
