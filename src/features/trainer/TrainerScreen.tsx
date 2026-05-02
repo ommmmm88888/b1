@@ -263,14 +263,18 @@ export function TrainerScreen() {
     }
 
     const correct = isAnswerCorrect(session.answer, currentItem.acceptedAnswers)
-
-    commitProgress((current) => recordAttempt(current, currentItem.id, correct))
-    setSession((current) => ({
-      ...current,
+    const nextSession = {
+      ...session,
       checked: true,
       correct,
       revealedHint: !correct,
-    }))
+    }
+
+    commitProgress((current) => recordAttempt(current, currentItem.id, correct))
+    skipSessionSyncSaveRef.current = true
+    saveTrainerSessionSnapshot(createSessionSnapshot(nextSession))
+    setSession(nextSession)
+    requestActiveCloudProgressSave()
 
     window.setTimeout(() => {
       nextButtonRef.current?.focus()
@@ -290,10 +294,15 @@ export function TrainerScreen() {
         commitProgress((current) => markDailySessionCompleted(current, today))
       }
 
-      setSession((current) => ({
-        ...current,
+      const nextSession = {
+        ...session,
         finished: true,
-      }))
+      }
+
+      skipSessionSyncSaveRef.current = true
+      saveTrainerSessionSnapshot(createSessionSnapshot(nextSession))
+      setSession(nextSession)
+      requestActiveCloudProgressSave()
 
       window.setTimeout(() => {
         startSessionButtonRef.current?.focus()
@@ -301,14 +310,19 @@ export function TrainerScreen() {
       return
     }
 
-    setSession((current) => ({
-      ...current,
-      currentIndex: current.currentIndex + 1,
+    const nextSession = {
+      ...session,
+      currentIndex: session.currentIndex + 1,
       answer: '',
       checked: false,
       correct: null,
       revealedHint: false,
-    }))
+    }
+
+    skipSessionSyncSaveRef.current = true
+    saveTrainerSessionSnapshot(createSessionSnapshot(nextSession))
+    setSession(nextSession)
+    requestActiveCloudProgressSave()
 
     window.setTimeout(() => {
       answerInputRef.current?.focus()
@@ -317,12 +331,22 @@ export function TrainerScreen() {
 
   function handleRepeatMistakes() {
     const currentProgress = loadProgress()
-    setSession(createSession('mistakes', currentProgress))
+    const nextSession = createSession('mistakes', currentProgress)
+
+    skipSessionSyncSaveRef.current = true
+    saveTrainerSessionSnapshot(createSessionSnapshot(nextSession))
+    setSession(nextSession)
+    requestActiveCloudProgressSave()
   }
 
   function handleStartDaily() {
     const currentProgress = loadProgress()
-    setSession(createSession('daily', currentProgress))
+    const nextSession = createSession('daily', currentProgress)
+
+    skipSessionSyncSaveRef.current = true
+    saveTrainerSessionSnapshot(createSessionSnapshot(nextSession))
+    setSession(nextSession)
+    requestActiveCloudProgressSave()
   }
 
   function handleAnswerKeyDown(event: KeyboardEvent<HTMLInputElement>) {

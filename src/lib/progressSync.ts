@@ -96,6 +96,7 @@ export type SyncComparisonResult = {
 const BACKUP_PREFIX = 'b1:backup:before-cloud-sync:'
 const CLOUD_SYNC_DEBOUNCE_MS = 450
 const CLOUD_AUTOSAVE_INTERVAL_MS = 5000
+const CLOUD_RECONCILE_INTERVAL_MS = 8000
 
 const defaultCloudSyncState: CloudSyncState = {
   status: 'idle',
@@ -125,6 +126,7 @@ let stopCloudSnapshot: (() => void) | null = null
 let stopLocalChangeListener: (() => void) | null = null
 let stopAutosaveListener: (() => void) | null = null
 let autosaveInterval: ReturnType<typeof window.setInterval> | null = null
+let cloudReconcileInterval: ReturnType<typeof window.setInterval> | null = null
 let pendingCloudWrite: ReturnType<typeof window.setTimeout> | null = null
 let activeUid: string | null = null
 let lastSavedFingerprint: string | null = null
@@ -303,6 +305,35 @@ function stopAutosaveHeartbeat(): void {
 
   stopAutosaveListener?.()
   stopAutosaveListener = null
+}
+
+function startCloudReconcileHeartbeat(uid: string): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (cloudReconcileInterval) {
+    window.clearInterval(cloudReconcileInterval)
+  }
+
+  cloudReconcileInterval = window.setInterval(() => {
+    if (activeUid !== uid || cloudSyncState.status !== 'active' || document.visibilityState !== 'visible') {
+      return
+    }
+
+    void loadCloudProgressToLocal(uid)
+  }, CLOUD_RECONCILE_INTERVAL_MS)
+}
+
+function stopCloudReconcileHeartbeat(): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (cloudReconcileInterval) {
+    window.clearInterval(cloudReconcileInterval)
+    cloudReconcileInterval = null
+  }
 }
 
 export function subscribeSyncDiagnostics(listener: (state: SyncDiagnosticsState) => void): () => void {
@@ -892,16 +923,15 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
           return
         }
 
-        const merged = mergeProgressSnapshots(collectLocalProgressSnapshot(), cloudSnapshot)
-        applyProgressSnapshot(merged)
-        markSnapshotSaved(merged)
+        applyProgressSnapshot(cloudSnapshot)
+        markSnapshotSaved(cloudSnapshot)
         setSyncDiagnostics({
           firestoreStatus: 'available',
           listenerStatus: 'active',
           lastCloudReadAt: new Date().toISOString(),
           lastSyncError: null,
           cloudTrainer: summarizeTrainerProgress(cloudSnapshot.sections.trainer.value),
-          localTrainerSession: summarizeTrainerSession(collectCloudProgressSnapshot().trainerSession),
+          localTrainerSession: summarizeTrainerSession(loadTrainerSessionSnapshot()),
           cloudTrainerSession: summarizeTrainerSession(cloudSnapshot.trainerSession),
         })
         setCloudSyncState({
@@ -939,6 +969,7 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
       document.removeEventListener('visibilitychange', handleAutosaveFlush)
     }
     startAutosaveHeartbeat(uid)
+    startCloudReconcileHeartbeat(uid)
 
     setSyncDiagnostics({
       firestoreStatus: 'available',
@@ -966,6 +997,7 @@ export function stopCloudProgressSync(): void {
   stopLocalChangeListener?.()
   stopLocalChangeListener = null
   stopAutosaveHeartbeat()
+  stopCloudReconcileHeartbeat()
   activeUid = null
   lastSavedFingerprint = null
 
@@ -1015,23 +1047,21 @@ export async function loadCloudProgressToLocal(uid: string): Promise<SyncResult>
       }
     }
 
-    const localCloudSnapshot = collectCloudProgressSnapshot()
-    const mergedSnapshot = mergeProgressSnapshots(localCloudSnapshot, remoteSnapshot)
-    applyProgressSnapshot(mergedSnapshot)
-    markSnapshotSaved(mergedSnapshot)
+    applyProgressSnapshot(remoteSnapshot)
+    markSnapshotSaved(remoteSnapshot)
     setSyncDiagnostics({
       firestoreStatus: 'available',
       lastCloudReadAt: new Date().toISOString(),
       lastSyncError: null,
       cloudTrainer: summarizeTrainerProgress(remoteSnapshot.sections.trainer.value),
-      localTrainerSession: summarizeTrainerSession(localCloudSnapshot.trainerSession),
+      localTrainerSession: summarizeTrainerSession(loadTrainerSessionSnapshot()),
       cloudTrainerSession: summarizeTrainerSession(remoteSnapshot.trainerSession),
     })
 
     return {
       ok: true,
       status: 'synced',
-      snapshot: mergedSnapshot,
+      snapshot: remoteSnapshot,
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Не удалось загрузить прогресс из облака'
