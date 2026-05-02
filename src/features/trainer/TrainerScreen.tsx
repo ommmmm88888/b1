@@ -83,6 +83,16 @@ export function TrainerScreen() {
     setProgress(loadProgress())
   }, [])
 
+  const commitProgress = useCallback(
+    (nextProgress: ProgressState) => {
+      skipSyncSaveRef.current = true
+      saveProgress(nextProgress)
+      requestActiveCloudProgressSave()
+      setProgress(nextProgress)
+    },
+    [],
+  )
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       skipHydrationSaveRef.current = 2
@@ -176,7 +186,8 @@ export function TrainerScreen() {
 
     const correct = isAnswerCorrect(session.answer, currentItem.acceptedAnswers)
 
-    setProgress((current) => recordAttempt(current, currentItem.id, correct))
+    const nextProgress = recordAttempt(progress, currentItem.id, correct)
+    commitProgress(nextProgress)
     setSession((current) => ({
       ...current,
       checked: true,
@@ -195,7 +206,7 @@ export function TrainerScreen() {
     if (isLastItem) {
       if (session.mode === 'daily') {
         const today = getTodayKey()
-        setProgress((current) => markDailySessionCompleted(current, today))
+        commitProgress(markDailySessionCompleted(progress, today))
       }
 
       setSession((current) => ({
