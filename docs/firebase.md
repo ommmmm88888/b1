@@ -47,6 +47,7 @@ Google login requires these manual console settings:
    - `ommmmm88888.github.io`
 
 The Firebase CLI used in this repo can create/list web apps and print SDK config, but it does not expose a safe command here for enabling the Google provider or authorized domains.
+`gcloud` was not available in the release environment used for the Google login smoke, so provider/domain setup remains a Firebase Console step.
 
 ## Current Behavior
 
