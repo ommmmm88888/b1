@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-02T19:30:00+02:00",
+  "commit": "81e24e628326656517a3a1210125c217645da44d (worktree)",
+  "localUrl": "http://127.0.0.1:4173/b1/",
+  "publicUrl": "https://ommmmm88888.github.io/b1/",
+  "contextsIndependent": true,
+  "sameUidProven": false,
+  "proofStatus": "FAIL",
+  "blocker": {
+    "summary": "Automated independent-context sync proof is blocked by Firebase Auth provider settings.",
+    "details": [
+      "Email/password proof account: 'Тестовый вход не включен в Firebase Console.'",
+      "Anonymous proof account fallback: 'Тестовый вход не включен в Firebase Console.'",
+      "Google sign-in cannot be automated in this environment because no Google auth session is available in the local Brave profile copy."
+    ]
+  },
+  "localPreview": {
+    "attempted": true,
+    "automaticCloudBootstrap": false,
+    "manualCloudLoad": false,
+    "notes": "Local preview loaded and proof-mode controls rendered, but auth was blocked before any cloud writes/reads could be exercised."
+  },
+  "publicProof": {
+    "attempted": false,
+    "reason": "Local automated auth blocker prevented a valid same-account cross-profile run."
+  },
+  "notes": [
+    "Same-device local persistence had already been proven earlier in real browser smoke.",
+    "Cross-profile cloud sync code now includes trainer session snapshot synchronization and sync diagnostics for local/cloud session state."
+  ]
+}

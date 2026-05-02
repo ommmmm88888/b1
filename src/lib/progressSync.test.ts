@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   applyProgressSnapshot,
+  collectCloudProgressSnapshot,
   collectLocalProgressSnapshot,
   mergeProgressSnapshots,
   PROGRESS_STORAGE_KEYS,
@@ -215,6 +216,92 @@ describe('progressSync', () => {
 
     expect(JSON.parse(window.localStorage.getItem(PROGRESS_STORAGE_KEYS.trainer) ?? 'null')).toEqual(
       snapshot.sections.trainer.value,
+    )
+  })
+
+  it('collects the trainer session snapshot alongside cloud progress', () => {
+    window.localStorage.clear()
+    window.localStorage.setItem(
+      PROGRESS_STORAGE_KEYS.trainer,
+      JSON.stringify({
+        totalAttempts: 8,
+        correctAnswers: 6,
+        mistakesByItem: { greeting: 2 },
+        lastSessionDate: '2026-05-02',
+        dailyCompletedCount: 1,
+        streak: 2,
+      }),
+    )
+    window.localStorage.setItem(
+      'b1-polish-trainer-session-v0',
+      JSON.stringify({
+        schemaVersion: 1,
+        capturedAt: '2026-05-02T10:00:00.000Z',
+        mode: 'daily',
+        itemIds: ['a', 'b', 'c'],
+        currentIndex: 2,
+        answer: 'answer',
+        checked: true,
+        correct: true,
+        revealedHint: false,
+        finished: false,
+      }),
+    )
+
+    const snapshot = collectCloudProgressSnapshot()
+
+    expect(snapshot.sections.trainer.value).toEqual({
+      totalAttempts: 8,
+      correctAnswers: 6,
+      mistakesByItem: { greeting: 2 },
+      lastSessionDate: '2026-05-02',
+      dailyCompletedCount: 1,
+      streak: 2,
+    })
+    expect(snapshot.trainerSession).toEqual({
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:00:00.000Z',
+      mode: 'daily',
+      itemIds: ['a', 'b', 'c'],
+      currentIndex: 2,
+      answer: 'answer',
+      checked: true,
+      correct: true,
+      revealedHint: false,
+      finished: false,
+    })
+  })
+
+  it('applies trainer session snapshots back to localStorage', () => {
+    window.localStorage.clear()
+
+    const snapshot: ProgressSnapshot = {
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:00:00.000Z',
+      sections: Object.fromEntries(
+        Object.entries(PROGRESS_STORAGE_KEYS).map(([section, key]) => [
+          section,
+          { key, value: null, updatedAt: null },
+        ]),
+      ) as ProgressSnapshot['sections'],
+      trainerSession: {
+        schemaVersion: 1,
+        capturedAt: '2026-05-02T11:00:00.000Z',
+        mode: 'mistakes',
+        itemIds: ['a', 'b'],
+        currentIndex: 1,
+        answer: 'odpowiedź',
+        checked: true,
+        correct: false,
+        revealedHint: true,
+        finished: false,
+      },
+    }
+
+    applyProgressSnapshot(snapshot)
+
+    expect(JSON.parse(window.localStorage.getItem('b1-polish-trainer-session-v0') ?? 'null')).toEqual(
+      snapshot.trainerSession,
     )
   })
 

@@ -6,6 +6,11 @@ import { firebaseConfigState, isFirebaseConfigured } from './firebaseConfig'
 export type AuthUser = Pick<User, 'uid' | 'displayName' | 'email' | 'photoURL'>
 export type AuthStateListener = (user: AuthUser | null) => void
 
+const PROOF_ACCOUNT = {
+  email: 'b1.sync.proof@example.com',
+  password: 'b1-sync-proof-2026',
+} as const
+
 function toAuthUser(user: User): AuthUser {
   return {
     uid: user.uid,
@@ -15,7 +20,7 @@ function toAuthUser(user: User): AuthUser {
   }
 }
 
-function authErrorMessage(error: unknown): string {
+function authErrorMessage(error: unknown, providerLabel = 'Google вход'): string {
   const code =
     typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
       ? error.code
@@ -30,7 +35,7 @@ function authErrorMessage(error: unknown): string {
   }
 
   if (code === 'auth/operation-not-allowed') {
-    return 'Google вход не включен в Firebase Console.'
+    return `${providerLabel} не включен в Firebase Console.`
   }
 
   if (code === 'auth/unauthorized-domain') {
@@ -59,6 +64,66 @@ export async function signInWithGoogle(): Promise<void> {
     await signInWithPopup(auth, provider)
   } catch (error) {
     return Promise.reject(new Error(authErrorMessage(error)))
+  }
+}
+
+function authCode(error: unknown): string {
+  return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string'
+    ? error.code
+    : ''
+}
+
+export async function signInWithProofAccount(): Promise<void> {
+  const app = await getFirebaseApp()
+
+  if (!app) {
+    return Promise.reject(new Error(firebaseConfigState.configured ? 'Firebase не настроен' : firebaseConfigState.reason))
+  }
+
+  try {
+    const {
+      browserLocalPersistence,
+      createUserWithEmailAndPassword,
+      signInAnonymously,
+      getAuth,
+      setPersistence,
+      signInWithEmailAndPassword,
+    } = await import('firebase/auth')
+
+    const auth = getAuth(app)
+    await setPersistence(auth, browserLocalPersistence)
+
+    try {
+      await signInAnonymously(auth)
+      return
+    } catch {
+      // Fall through to the deterministic email/password test account.
+    }
+
+    try {
+      await signInWithEmailAndPassword(auth, PROOF_ACCOUNT.email, PROOF_ACCOUNT.password)
+      return
+    } catch (error) {
+      const code = authCode(error)
+
+      if (code !== 'auth/user-not-found' && code !== 'auth/invalid-credential' && code !== 'auth/wrong-password') {
+        throw error
+      }
+
+      try {
+        await createUserWithEmailAndPassword(auth, PROOF_ACCOUNT.email, PROOF_ACCOUNT.password)
+        return
+      } catch (createError) {
+        if (authCode(createError) === 'auth/email-already-in-use') {
+          await signInWithEmailAndPassword(auth, PROOF_ACCOUNT.email, PROOF_ACCOUNT.password)
+          return
+        }
+
+        throw createError
+      }
+    }
+  } catch (error) {
+    return Promise.reject(new Error(authErrorMessage(error, 'Тестовый вход')))
   }
 }
 

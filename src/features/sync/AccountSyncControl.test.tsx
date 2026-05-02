@@ -74,6 +74,8 @@ describe('AccountSyncControl', () => {
           lastCloudWriteAt: string | null
           lastSyncError: string | null
           cloudTrainer: null
+          localTrainerSession: null
+          cloudTrainerSession: null
           cacheVersion: string
         }) => void) => {
           listener({
@@ -85,6 +87,8 @@ describe('AccountSyncControl', () => {
             lastCloudWriteAt: null,
             lastSyncError: null,
             cloudTrainer: null,
+            localTrainerSession: null,
+            cloudTrainerSession: null,
             cacheVersion: 'v1-2026-05-02',
           })
           return () => undefined
@@ -98,6 +102,8 @@ describe('AccountSyncControl', () => {
           lastCloudWriteAt: null,
           lastSyncError: null,
           cloudTrainer: null,
+          localTrainerSession: null,
+          cloudTrainerSession: null,
           cacheVersion: 'v1-2026-05-02',
         }),
       }
@@ -142,6 +148,8 @@ describe('AccountSyncControl', () => {
           lastCloudWriteAt: string | null
           lastSyncError: string | null
           cloudTrainer: null
+          localTrainerSession: null
+          cloudTrainerSession: null
           cacheVersion: string
         }) => void) => {
           listener({
@@ -153,6 +161,8 @@ describe('AccountSyncControl', () => {
             lastCloudWriteAt: null,
             lastSyncError: null,
             cloudTrainer: null,
+            localTrainerSession: null,
+            cloudTrainerSession: null,
             cacheVersion: 'v1-2026-05-02',
           })
           return () => undefined
@@ -166,6 +176,8 @@ describe('AccountSyncControl', () => {
           lastCloudWriteAt: null,
           lastSyncError: null,
           cloudTrainer: null,
+          localTrainerSession: null,
+          cloudTrainerSession: null,
           cacheVersion: 'v1-2026-05-02',
         }),
       }
@@ -260,7 +272,7 @@ describe('AccountSyncControl', () => {
           listener({ status: 'active', message: 'синхронизация включена', lastSyncedAt: '2026-05-02T10:00:00.000Z' })
           return () => undefined
         },
-        subscribeSyncDiagnostics: (listener: (state: { firebaseConfigured: boolean; firestoreStatus: string; listenerStatus: string; activeUidSuffix: string | null; lastCloudReadAt: string | null; lastCloudWriteAt: string | null; lastSyncError: string | null; cloudTrainer: null; cacheVersion: string }) => void) => {
+        subscribeSyncDiagnostics: (listener: (state: { firebaseConfigured: boolean; firestoreStatus: string; listenerStatus: string; activeUidSuffix: string | null; lastCloudReadAt: string | null; lastCloudWriteAt: string | null; lastSyncError: string | null; cloudTrainer: null; localTrainerSession: null; cloudTrainerSession: null; cacheVersion: string }) => void) => {
           listener({
             firebaseConfigured: true,
             firestoreStatus: 'available',
@@ -270,6 +282,8 @@ describe('AccountSyncControl', () => {
             lastCloudWriteAt: '2026-05-02T10:00:00.000Z',
             lastSyncError: null,
             cloudTrainer: null,
+            localTrainerSession: null,
+            cloudTrainerSession: null,
             cacheVersion: 'v1-2026-05-02',
           })
           return () => undefined
@@ -283,6 +297,8 @@ describe('AccountSyncControl', () => {
           lastCloudWriteAt: '2026-05-02T10:00:00.000Z',
           lastSyncError: null,
           cloudTrainer: null,
+          localTrainerSession: null,
+          cloudTrainerSession: null,
           cacheVersion: 'v1-2026-05-02',
         }),
         loadCloudProgressToLocal,

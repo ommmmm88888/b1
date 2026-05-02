@@ -4,12 +4,14 @@ import {
   firebaseConfigState,
   isFirebaseConfigured,
   signInWithGoogle,
+  signInWithProofAccount,
   signOut,
   subscribeAuthState,
   type AuthUser,
 } from '../../lib/auth'
 import { PROGRESS_CHANGED_EVENT, PROGRESS_SYNCED_EVENT } from '../../lib/progressEvents'
 import { loadProgress } from '../../lib/progressStorage'
+import { loadTrainerSessionSnapshot } from '../../lib/trainerSessionStorage'
 import {
   compareCloudProgress,
   getSyncDiagnostics,
@@ -20,6 +22,7 @@ import {
   subscribeCloudSyncState,
   subscribeSyncDiagnostics,
   summarizeTrainerProgress,
+  summarizeTrainerSession,
   type CloudSyncState,
   type SyncDiagnosticsState,
 } from '../../lib/progressSync'
@@ -49,13 +52,18 @@ export function AccountSyncControl() {
   const [showSetupInfo, setShowSetupInfo] = useState(false)
   const [diagnostics, setDiagnostics] = useState<SyncDiagnosticsState>(getSyncDiagnostics())
   const [localTrainer, setLocalTrainer] = useState(() => summarizeTrainerProgress(loadProgress()))
+  const [localTrainerSession, setLocalTrainerSession] = useState(() => summarizeTrainerSession(loadTrainerSessionSnapshot()))
   const [manualMessage, setManualMessage] = useState('')
+  const proofMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('syncProof')
 
   useEffect(() => subscribeAuthState(setUser), [])
   useEffect(() => subscribeCloudSyncState(setSyncState), [])
   useEffect(() => subscribeSyncDiagnostics(setDiagnostics), [])
   useEffect(() => {
-    const refreshLocalTrainer = () => setLocalTrainer(summarizeTrainerProgress(loadProgress()))
+    const refreshLocalTrainer = () => {
+      setLocalTrainer(summarizeTrainerProgress(loadProgress()))
+      setLocalTrainerSession(summarizeTrainerSession(loadTrainerSessionSnapshot()))
+    }
 
     refreshLocalTrainer()
 
@@ -112,6 +120,20 @@ export function AccountSyncControl() {
 
     try {
       await signInWithGoogle()
+      setStatus('idle')
+    } catch (error) {
+      setStatus('failed')
+      setMessage(error instanceof Error ? error.message : 'Не удалось войти')
+    }
+  }
+
+  async function handleProofSignIn() {
+    setStatus('signing-in')
+    setMessage('')
+    setManualMessage('')
+
+    try {
+      await signInWithProofAccount()
       setStatus('idle')
     } catch (error) {
       setStatus('failed')
@@ -221,10 +243,32 @@ export function AccountSyncControl() {
             <strong>{`a:${localTrainer.attempts} c:${localTrainer.correctAnswers} m:${localTrainer.mistakeTotal} d:${localTrainer.dailyCompletedCount} s:${localTrainer.streak} @${formatSyncTime(localTrainer.updatedAt)}`}</strong>
           </div>
           <div className="account-sync__diagnostic">
+            <span>Local session</span>
+            <strong>
+              {localTrainerSession
+                ? `${localTrainerSession.mode} · ${localTrainerSession.currentIndex + 1}/${localTrainerSession.itemCount} · ${
+                    localTrainerSession.finished ? 'finished' : localTrainerSession.checked ? 'checked' : 'open'
+                  } @${formatSyncTime(localTrainerSession.updatedAt)}`
+                : 'нет'}
+            </strong>
+          </div>
+          <div className="account-sync__diagnostic">
             <span>Cloud trainer</span>
             <strong>
               {cloudTrainer
                 ? `a:${cloudTrainer.attempts} c:${cloudTrainer.correctAnswers} m:${cloudTrainer.mistakeTotal} d:${cloudTrainer.dailyCompletedCount} s:${cloudTrainer.streak} @${formatSyncTime(cloudTrainer.updatedAt)}`
+                : 'нет'}
+            </strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Cloud session</span>
+            <strong>
+              {diagnostics.cloudTrainerSession
+                ? `${diagnostics.cloudTrainerSession.mode} · ${
+                    diagnostics.cloudTrainerSession.currentIndex + 1
+                  }/${diagnostics.cloudTrainerSession.itemCount} · ${
+                    diagnostics.cloudTrainerSession.finished ? 'finished' : diagnostics.cloudTrainerSession.checked ? 'checked' : 'open'
+                  } @${formatSyncTime(diagnostics.cloudTrainerSession.updatedAt)}`
                 : 'нет'}
             </strong>
           </div>
@@ -275,6 +319,11 @@ export function AccountSyncControl() {
           <button className="account-sync__button" type="button" onClick={handleSignIn} disabled={status === 'signing-in'}>
             {status === 'signing-in' ? 'Вход...' : 'Google вход'}
           </button>
+          {proofMode ? (
+            <button className="account-sync__button" type="button" onClick={handleProofSignIn} disabled={status === 'signing-in'}>
+              {status === 'signing-in' ? 'Вход...' : 'Тестовый вход'}
+            </button>
+          ) : null}
           {message ? <span className="account-sync__status">{message}</span> : null}
         </div>
         {renderDiagnosticsPanel()}

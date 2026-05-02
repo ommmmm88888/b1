@@ -2,6 +2,7 @@ export {
   firebaseConfigState,
   isFirebaseConfigured,
   signInWithGoogle,
+  signInWithProofAccount,
   signOut,
   subscribeAuthState,
   type AuthStateListener,

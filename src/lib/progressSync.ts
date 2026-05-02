@@ -6,6 +6,11 @@ import {
   PROGRESS_CHANGED_EVENT,
   runWithoutProgressChangeEvent,
 } from './progressEvents'
+import {
+  loadTrainerSessionSnapshot,
+  saveTrainerSessionSnapshot,
+  type TrainerSessionSnapshot,
+} from './trainerSessionStorage'
 
 export const PROGRESS_STORAGE_KEYS = {
   trainer: 'b1-polish-trainer-progress-v0',
@@ -30,6 +35,7 @@ export type ProgressSnapshot = {
   schemaVersion: 1
   capturedAt: string
   sections: Record<ProgressSection, ProgressSectionSnapshot>
+  trainerSession?: TrainerSessionSnapshot | null
 }
 
 export type SyncResult =
@@ -56,6 +62,15 @@ export type TrainerProgressSummary = {
   updatedAt: string | null
 }
 
+export type TrainerSessionSummary = {
+  mode: TrainerSessionSnapshot['mode']
+  currentIndex: number
+  itemCount: number
+  checked: boolean
+  finished: boolean
+  updatedAt: string | null
+}
+
 export type SyncDiagnosticsState = {
   firebaseConfigured: boolean
   firestoreStatus: 'unknown' | 'available' | 'unavailable'
@@ -65,6 +80,8 @@ export type SyncDiagnosticsState = {
   lastCloudWriteAt: string | null
   lastSyncError: string | null
   cloudTrainer: TrainerProgressSummary | null
+  localTrainerSession: TrainerSessionSummary | null
+  cloudTrainerSession: TrainerSessionSummary | null
   cacheVersion: string
 }
 
@@ -95,6 +112,8 @@ const defaultSyncDiagnosticsState: SyncDiagnosticsState = {
   lastCloudWriteAt: null,
   lastSyncError: null,
   cloudTrainer: null,
+  localTrainerSession: null,
+  cloudTrainerSession: null,
   cacheVersion: SERVICE_WORKER_CACHE_VERSION,
 }
 
@@ -183,6 +202,38 @@ export function summarizeTrainerProgress(value: unknown): TrainerProgressSummary
   }
 }
 
+function isTrainerSessionSnapshot(value: unknown): value is TrainerSessionSnapshot {
+  return (
+    isRecord(value) &&
+    value.schemaVersion === 1 &&
+    (value.mode === 'daily' || value.mode === 'mistakes') &&
+    Array.isArray(value.itemIds) &&
+    value.itemIds.every((item) => typeof item === 'string') &&
+    typeof value.currentIndex === 'number' &&
+    typeof value.answer === 'string' &&
+    typeof value.checked === 'boolean' &&
+    (typeof value.correct === 'boolean' || value.correct === null) &&
+    typeof value.revealedHint === 'boolean' &&
+    typeof value.finished === 'boolean' &&
+    typeof value.capturedAt === 'string'
+  )
+}
+
+export function summarizeTrainerSession(value: unknown): TrainerSessionSummary | null {
+  if (!isTrainerSessionSnapshot(value)) {
+    return null
+  }
+
+  return {
+    mode: value.mode,
+    currentIndex: value.currentIndex,
+    itemCount: value.itemIds.length,
+    checked: value.checked,
+    finished: value.finished,
+    updatedAt: value.capturedAt,
+  }
+}
+
 function trainerSummaryEquals(local: TrainerProgressSummary, remote: TrainerProgressSummary | null): boolean {
   if (!remote) {
     return false
@@ -208,7 +259,10 @@ function setSyncDiagnostics(next: Partial<SyncDiagnosticsState>): void {
 }
 
 function getSnapshotFingerprint(snapshot: ProgressSnapshot): string {
-  return JSON.stringify(snapshot.sections)
+  return JSON.stringify({
+    sections: snapshot.sections,
+    trainerSession: snapshot.trainerSession ?? null,
+  })
 }
 
 function markSnapshotSaved(snapshot: ProgressSnapshot): void {
@@ -216,7 +270,7 @@ function markSnapshotSaved(snapshot: ProgressSnapshot): void {
 }
 
 function hasPendingAutosave(): boolean {
-  return getSnapshotFingerprint(collectLocalProgressSnapshot()) !== lastSavedFingerprint
+  return getSnapshotFingerprint(collectCloudProgressSnapshot()) !== lastSavedFingerprint
 }
 
 function startAutosaveHeartbeat(uid: string): void {
@@ -284,6 +338,13 @@ export function collectLocalProgressSnapshot(storage: Storage = window.localStor
     schemaVersion: 1,
     capturedAt: new Date().toISOString(),
     sections,
+  }
+}
+
+export function collectCloudProgressSnapshot(storage: Storage = window.localStorage): ProgressSnapshot {
+  return {
+    ...collectLocalProgressSnapshot(storage),
+    trainerSession: loadTrainerSessionSnapshot(storage),
   }
 }
 
@@ -506,6 +567,33 @@ function mergeMockProgress(local: unknown, remote: unknown): unknown {
   return local
 }
 
+function mergeTrainerSession(local: TrainerSessionSnapshot | null, remote: TrainerSessionSnapshot | null): TrainerSessionSnapshot | null {
+  if (!local) {
+    return remote
+  }
+
+  if (!remote) {
+    return local
+  }
+
+  if (local.finished !== remote.finished) {
+    return remote.finished ? remote : local
+  }
+
+  if (local.currentIndex !== remote.currentIndex) {
+    return remote.currentIndex > local.currentIndex ? remote : local
+  }
+
+  if (local.checked !== remote.checked) {
+    return remote.checked ? remote : local
+  }
+
+  const localTime = Date.parse(local.capturedAt)
+  const remoteTime = Date.parse(remote.capturedAt)
+
+  return remoteTime > localTime ? remote : local
+}
+
 function mergeSectionValue(section: ProgressSection, local: unknown, remote: unknown): unknown {
   if (isEmptyValue(local)) {
     return remote ?? null
@@ -590,6 +678,7 @@ export function mergeProgressSnapshots(
     capturedAt:
       Date.parse(remote.capturedAt) > Date.parse(local.capturedAt) ? remote.capturedAt : local.capturedAt,
     sections,
+    trainerSession: mergeTrainerSession(local.trainerSession ?? null, remote.trainerSession ?? null),
   }
 }
 
@@ -599,6 +688,10 @@ export function applyProgressSnapshot(snapshot: ProgressSnapshot, storage: Stora
       if (hasValue(section)) {
         storage.setItem(section.key, JSON.stringify(section.value))
       }
+    }
+
+    if (snapshot.trainerSession) {
+      saveTrainerSessionSnapshot(snapshot.trainerSession, storage)
     }
   })
 
@@ -610,7 +703,16 @@ export function normalizeRemoteSnapshot(value: unknown): ProgressSnapshot | null
     return null
   }
 
-  return value as ProgressSnapshot
+  const trainerSession = 'trainerSession' in value && value.trainerSession !== null
+    ? value.trainerSession
+    : null
+
+  return {
+    schemaVersion: 1,
+    capturedAt: typeof value.capturedAt === 'string' ? value.capturedAt : new Date().toISOString(),
+    sections: value.sections as Record<ProgressSection, ProgressSectionSnapshot>,
+    trainerSession: isTrainerSessionSnapshot(trainerSession) ? trainerSession : null,
+  }
 }
 
 function setCloudSyncState(next: Partial<CloudSyncState>): void {
@@ -648,7 +750,7 @@ async function writeLocalProgressToCloud(uid: string): Promise<void> {
 
   try {
     const { doc, serverTimestamp, setDoc } = await import('firebase/firestore')
-    const snapshot = collectLocalProgressSnapshot()
+    const snapshot = collectCloudProgressSnapshot()
 
     await setDoc(
       doc(services.db, 'users', uid, 'state', 'progress'),
@@ -747,7 +849,7 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
   try {
     const { doc, getDoc, onSnapshot, serverTimestamp, setDoc } = await import('firebase/firestore')
     const progressRef = doc(services.db, 'users', uid, 'state', 'progress')
-    const localSnapshot = collectLocalProgressSnapshot()
+    const localSnapshot = collectCloudProgressSnapshot()
     preserveLocalProgressBackup(localSnapshot)
     const remoteDoc = await getDoc(progressRef)
     const remoteSnapshot = normalizeRemoteSnapshot(remoteDoc.data())
@@ -760,6 +862,8 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
       lastCloudReadAt: new Date().toISOString(),
       lastSyncError: null,
       cloudTrainer: summarizeTrainerProgress(mergedSnapshot.sections.trainer.value),
+      localTrainerSession: summarizeTrainerSession(mergedSnapshot.trainerSession),
+      cloudTrainerSession: summarizeTrainerSession(mergedSnapshot.trainerSession),
     })
 
     await setDoc(
@@ -797,6 +901,8 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
           lastCloudReadAt: new Date().toISOString(),
           lastSyncError: null,
           cloudTrainer: summarizeTrainerProgress(cloudSnapshot.sections.trainer.value),
+          localTrainerSession: summarizeTrainerSession(collectCloudProgressSnapshot().trainerSession),
+          cloudTrainerSession: summarizeTrainerSession(cloudSnapshot.trainerSession),
         })
         setCloudSyncState({
           status: 'active',
@@ -838,6 +944,8 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
       firestoreStatus: 'available',
       listenerStatus: 'active',
       cloudTrainer: summarizeTrainerProgress(mergedSnapshot.sections.trainer.value),
+      localTrainerSession: summarizeTrainerSession(mergedSnapshot.trainerSession),
+      cloudTrainerSession: summarizeTrainerSession(mergedSnapshot.trainerSession),
     })
     setCloudSyncState({
       status: 'active',
@@ -907,8 +1015,8 @@ export async function loadCloudProgressToLocal(uid: string): Promise<SyncResult>
       }
     }
 
-    const localSnapshot = collectLocalProgressSnapshot()
-    const mergedSnapshot = mergeProgressSnapshots(localSnapshot, remoteSnapshot)
+    const localCloudSnapshot = collectCloudProgressSnapshot()
+    const mergedSnapshot = mergeProgressSnapshots(localCloudSnapshot, remoteSnapshot)
     applyProgressSnapshot(mergedSnapshot)
     markSnapshotSaved(mergedSnapshot)
     setSyncDiagnostics({
@@ -916,6 +1024,8 @@ export async function loadCloudProgressToLocal(uid: string): Promise<SyncResult>
       lastCloudReadAt: new Date().toISOString(),
       lastSyncError: null,
       cloudTrainer: summarizeTrainerProgress(remoteSnapshot.sections.trainer.value),
+      localTrainerSession: summarizeTrainerSession(localCloudSnapshot.trainerSession),
+      cloudTrainerSession: summarizeTrainerSession(remoteSnapshot.trainerSession),
     })
 
     return {
@@ -954,7 +1064,7 @@ export async function saveLocalProgressToCloud(uid: string): Promise<SyncResult>
 
   try {
     const { doc, getDoc, serverTimestamp, setDoc } = await import('firebase/firestore')
-    const localSnapshot = collectLocalProgressSnapshot()
+    const localSnapshot = collectCloudProgressSnapshot()
     preserveLocalProgressBackup(localSnapshot)
 
     const progressRef = doc(services.db, 'users', uid, 'state', 'progress')
@@ -975,6 +1085,8 @@ export async function saveLocalProgressToCloud(uid: string): Promise<SyncResult>
       lastCloudWriteAt: new Date().toISOString(),
       lastSyncError: null,
       cloudTrainer: summarizeTrainerProgress(mergedSnapshot.sections.trainer.value),
+      localTrainerSession: summarizeTrainerSession(localSnapshot.trainerSession),
+      cloudTrainerSession: summarizeTrainerSession(mergedSnapshot.trainerSession),
     })
 
     return {
@@ -1022,7 +1134,8 @@ export async function compareCloudProgress(
     const progressRef = doc(services.db, 'users', uid, 'state', 'progress')
     const remoteDoc = await getDoc(progressRef)
     const remoteSnapshot = normalizeRemoteSnapshot(remoteDoc.data())
-    const localSummary = summarizeTrainerProgress(collectLocalProgressSnapshot().sections.trainer.value)
+    const localSnapshot = collectCloudProgressSnapshot()
+    const localSummary = summarizeTrainerProgress(localSnapshot.sections.trainer.value)
     const cloudSummary = remoteSnapshot ? summarizeTrainerProgress(remoteSnapshot.sections.trainer.value) : null
 
     setSyncDiagnostics({
@@ -1030,6 +1143,8 @@ export async function compareCloudProgress(
       lastCloudReadAt: new Date().toISOString(),
       lastSyncError: remoteSnapshot ? null : 'Облачный прогресс не найден',
       cloudTrainer: cloudSummary,
+      localTrainerSession: summarizeTrainerSession(localSnapshot.trainerSession),
+      cloudTrainerSession: summarizeTrainerSession(remoteSnapshot?.trainerSession ?? null),
     })
 
     return {

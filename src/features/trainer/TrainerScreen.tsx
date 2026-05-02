@@ -120,12 +120,16 @@ export function TrainerScreen() {
   )
   const skipHydrationSaveRef = useRef(0)
   const skipSyncSaveRef = useRef(false)
+  const skipSessionSyncSaveRef = useRef(true)
 
   const currentItem = session.items[session.currentIndex]
 
   const refreshProgressFromStorage = useCallback(() => {
     skipSyncSaveRef.current = true
-    setProgress(loadProgress())
+    skipSessionSyncSaveRef.current = true
+    const currentProgress = loadProgress()
+    setProgress(currentProgress)
+    setSession(createSessionFromSnapshot(loadTrainerSessionSnapshot(), currentProgress))
   }, [])
 
   const commitProgress = useCallback(
@@ -134,7 +138,6 @@ export function TrainerScreen() {
         const nextProgress = updater(current)
         skipSyncSaveRef.current = true
         saveProgress(nextProgress)
-        requestActiveCloudProgressSave()
         return nextProgress
       })
     },
@@ -152,6 +155,13 @@ export function TrainerScreen() {
 
   useEffect(() => {
     saveTrainerSessionSnapshot(createSessionSnapshot(session))
+
+    if (skipSessionSyncSaveRef.current) {
+      skipSessionSyncSaveRef.current = false
+      return
+    }
+
+    requestActiveCloudProgressSave()
   }, [session])
 
   useEffect(() => {
@@ -166,7 +176,6 @@ export function TrainerScreen() {
     }
 
     saveProgress(progress)
-    requestActiveCloudProgressSave()
   }, [progress])
 
   useEffect(() => {
