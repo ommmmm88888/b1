@@ -93,6 +93,18 @@ On sign-in, the app:
 
 When signed out, the app continues to use localStorage only.
 
+## Sync Diagnostics
+
+The account area includes a compact `Диагностика синхронизации` panel for manual verification. It shows redacted auth state, listener state, last cloud read/write times, local and cloud trainer summaries, and the current cache version.
+
+The same panel exposes three manual actions for diagnosis:
+
+- `Сохранить в облако`
+- `Загрузить из облака`
+- `Проверить синхронизацию`
+
+These controls are intended for troubleshooting the cloud read/write/apply chain. They do not replace the real manual two-device proof required before declaring cross-device sync complete.
+
 ## Sync Limitations
 
 - The sync is progress-focused and does not store private profile data.
