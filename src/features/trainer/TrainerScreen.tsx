@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { b1Vocabulary } from '../../data/b1Vocabulary'
 import { isAnswerCorrect } from '../../lib/answerCheck'
 import { applyAnswerEditForRetry } from '../../lib/answerRetryState'
@@ -9,6 +9,7 @@ import {
   recordAttempt,
   saveProgress,
 } from '../../lib/progressStorage'
+import { PROGRESS_SYNCED_EVENT } from '../../lib/progressEvents'
 import type { ProgressState, VocabularyItem } from '../../types/training'
 
 type SessionMode = 'daily' | 'mistakes'
@@ -71,12 +72,29 @@ function createSession(mode: SessionMode, progress: ProgressState): SessionState
 export function TrainerScreen() {
   const [progress, setProgress] = useState<ProgressState>(() => loadProgress())
   const [session, setSession] = useState<SessionState>(() => createSession('daily', loadProgress()))
+  const skipNextSaveRef = useRef(false)
 
   const currentItem = session.items[session.currentIndex]
 
   useEffect(() => {
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false
+      return
+    }
+
     saveProgress(progress)
   }, [progress])
+
+  useEffect(() => {
+    const handleProgressSynced = () => {
+      skipNextSaveRef.current = true
+      setProgress(loadProgress())
+    }
+
+    window.addEventListener(PROGRESS_SYNCED_EVENT, handleProgressSynced)
+
+    return () => window.removeEventListener(PROGRESS_SYNCED_EVENT, handleProgressSynced)
+  }, [])
 
   const sessionStats = useMemo(() => {
     const attempts = progress.totalAttempts

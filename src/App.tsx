@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { GrammarDrillScreen } from './features/grammar/GrammarDrillScreen'
 import { IntensivePlanScreen } from './features/plan/IntensivePlanScreen'
 import { ListeningPracticeScreen } from './features/listening/ListeningPracticeScreen'
@@ -8,7 +8,6 @@ import { SpeakingPracticeScreen } from './features/speaking/SpeakingPracticeScre
 import { AccountSyncControl } from './features/sync/AccountSyncControl'
 import { TrainerScreen } from './features/trainer/TrainerScreen'
 import { WritingPracticeScreen } from './features/writing/WritingPracticeScreen'
-import { PROGRESS_SYNCED_EVENT } from './lib/progressEvents'
 import './App.css'
 
 type AppMode =
@@ -34,14 +33,6 @@ const modes: { id: AppMode; label: string }[] = [
 
 function App() {
   const [mode, setMode] = useState<AppMode>('trainer')
-  const [syncVersion, setSyncVersion] = useState(0)
-
-  useEffect(() => {
-    const handleProgressSynced = () => setSyncVersion((current) => current + 1)
-
-    window.addEventListener(PROGRESS_SYNCED_EVENT, handleProgressSynced)
-    return () => window.removeEventListener(PROGRESS_SYNCED_EVENT, handleProgressSynced)
-  }, [])
 
   return (
     <>
@@ -66,7 +57,7 @@ function App() {
           <AccountSyncControl />
         </div>
       </header>
-      <div key={`${mode}-${syncVersion}`}>
+      <div>
         {mode === 'trainer' ? <TrainerScreen /> : null}
         {mode === 'intensive' ? <IntensivePlanScreen /> : null}
         {mode === 'grammar' ? <GrammarDrillScreen /> : null}
