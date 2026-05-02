@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { b1Vocabulary } from '../../data/b1Vocabulary'
 import { isAnswerCorrect } from '../../lib/answerCheck'
 import { applyAnswerEditForRetry } from '../../lib/answerRetryState'
@@ -118,6 +118,9 @@ export function TrainerScreen() {
   const [session, setSession] = useState<SessionState>(() =>
     createSessionFromSnapshot(loadTrainerSessionSnapshot(), loadProgress()),
   )
+  const answerInputRef = useRef<HTMLInputElement | null>(null)
+  const nextButtonRef = useRef<HTMLButtonElement | null>(null)
+  const startSessionButtonRef = useRef<HTMLButtonElement | null>(null)
   const skipHydrationSaveRef = useRef(0)
   const skipSyncSaveRef = useRef(false)
   const skipSessionSyncSaveRef = useRef(true)
@@ -215,6 +218,20 @@ export function TrainerScreen() {
     }
   }, [refreshProgressFromStorage])
 
+  useEffect(() => {
+    if (session.finished) {
+      startSessionButtonRef.current?.focus()
+      return
+    }
+
+    if (session.checked) {
+      nextButtonRef.current?.focus()
+      return
+    }
+
+    answerInputRef.current?.focus()
+  }, [session.checked, session.currentIndex, session.finished])
+
   const sessionStats = useMemo(() => {
     const attempts = progress.totalAttempts
     const correctAnswers = progress.correctAnswers
@@ -254,6 +271,10 @@ export function TrainerScreen() {
       correct,
       revealedHint: !correct,
     }))
+
+    window.setTimeout(() => {
+      nextButtonRef.current?.focus()
+    }, 0)
   }
 
   function handleNext() {
@@ -273,6 +294,10 @@ export function TrainerScreen() {
         ...current,
         finished: true,
       }))
+
+      window.setTimeout(() => {
+        startSessionButtonRef.current?.focus()
+      }, 0)
       return
     }
 
@@ -284,6 +309,10 @@ export function TrainerScreen() {
       correct: null,
       revealedHint: false,
     }))
+
+    window.setTimeout(() => {
+      answerInputRef.current?.focus()
+    }, 0)
   }
 
   function handleRepeatMistakes() {
@@ -294,6 +323,21 @@ export function TrainerScreen() {
   function handleStartDaily() {
     const currentProgress = loadProgress()
     setSession(createSession('daily', currentProgress))
+  }
+
+  function handleAnswerKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter') {
+      return
+    }
+
+    event.preventDefault()
+
+    if (session.checked) {
+      handleNext()
+      return
+    }
+
+    handleCheck()
   }
 
   const sessionTitle = session.mode === 'daily' ? 'Ежедневная практика' : 'Повтор ошибок'
@@ -400,7 +444,12 @@ export function TrainerScreen() {
                 </div>
               </div>
               <div className="summary-card__actions">
-                <button className="button button--primary" type="button" onClick={handleStartDaily}>
+                <button
+                  className="button button--primary"
+                  type="button"
+                  ref={startSessionButtonRef}
+                  onClick={handleStartDaily}
+                >
                   Начать новую дневную сессию
                 </button>
                 <button className="button" type="button" onClick={handleRepeatMistakes}>
@@ -419,8 +468,10 @@ export function TrainerScreen() {
                 <div className="input-row">
                   <label htmlFor="answer">Введите перевод на польский</label>
                   <input
+                    ref={answerInputRef}
                     id="answer"
                     value={session.answer}
+                    onKeyDown={handleAnswerKeyDown}
                     onChange={(event) => {
                       const answer = event.target.value
 
@@ -444,17 +495,13 @@ export function TrainerScreen() {
                 )}
 
                 <div className="button-row">
-                  <button
-                    className="button button--primary"
-                    type="button"
-                    onClick={handleCheck}
-                    disabled={session.checked}
-                  >
+                  <button className="button button--primary" type="button" onClick={handleCheck} disabled={session.checked}>
                     Проверить
                   </button>
                   <button
                     className="button"
                     type="button"
+                    ref={nextButtonRef}
                     onClick={handleNext}
                     disabled={!session.checked}
                   >

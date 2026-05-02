@@ -583,6 +583,13 @@
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.14);
 }
 
+.input-row input:focus-visible {
+  border-color: rgba(56, 189, 248, 0.78);
+  box-shadow:
+    0 0 0 4px rgba(56, 189, 248, 0.16),
+    0 0 0 1px rgba(8, 145, 178, 0.45) inset;
+}
+
 .button-row {
   display: flex;
   flex-wrap: wrap;
@@ -619,6 +626,13 @@
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.button:focus-visible,
+.mode-switch__button:focus-visible,
+.account-sync__button:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, 0.9);
+  outline-offset: 2px;
 }
 
 .button--primary {
