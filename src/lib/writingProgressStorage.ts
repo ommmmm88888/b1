@@ -1,4 +1,5 @@
 import type { WritingProgressState, WritingTaskProgress } from '../types/writing'
+import { dispatchProgressChanged } from './progressEvents'
 
 const STORAGE_KEY = 'b1_writing_progress_v0'
 
@@ -80,6 +81,7 @@ export function saveWritingProgress(progress: WritingProgressState): void {
   }
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
+  dispatchProgressChanged('writing')
 }
 
 export function getWritingTaskProgress(

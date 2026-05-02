@@ -55,7 +55,12 @@ describe('AccountSyncControl', () => {
       },
     }))
     vi.doMock('../../lib/progressSync', () => ({
-      syncLocalProgressToCloud: vi.fn(),
+      startCloudProgressSync: vi.fn(),
+      stopCloudProgressSync: vi.fn(),
+      subscribeCloudSyncState: (listener: (state: { status: string; message: string; lastSyncedAt: null }) => void) => {
+        listener({ status: 'idle', message: '', lastSyncedAt: null })
+        return () => undefined
+      },
     }))
 
     const { AccountSyncControl } = await import('./AccountSyncControl')
@@ -74,6 +79,14 @@ describe('AccountSyncControl', () => {
       signOut: vi.fn(),
       subscribeAuthState: (listener: (user: null) => void) => {
         listener(null)
+        return () => undefined
+      },
+    }))
+    vi.doMock('../../lib/progressSync', () => ({
+      startCloudProgressSync: vi.fn(),
+      stopCloudProgressSync: vi.fn(),
+      subscribeCloudSyncState: (listener: (state: { status: string; message: string; lastSyncedAt: null }) => void) => {
+        listener({ status: 'idle', message: '', lastSyncedAt: null })
         return () => undefined
       },
     }))

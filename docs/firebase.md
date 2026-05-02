@@ -65,16 +65,36 @@ Missing-config build:
 - UI shows `Google вход`, `не настроено`, and an explanation.
 - Training modules continue to work.
 
-## Sync Limitations
+## Cloud Progress Sync
 
-Google login is configured separately from cross-device progress sync.
-
-The repository contains a Firestore progress sync foundation and rules for:
+Google login is now connected to Firestore progress sync. Signed-in users store progress under:
 
 ```text
-users/{uid}/progress/current
+users/{uid}/state/progress
 ```
 
-This task does not prove production Firestore read/write sync. Until that is tested separately, the UI must say `вход выполнен`, not `синхронизация включена`.
+The document contains one schema-versioned progress snapshot with sections for trainer, intensive, grammar, writing, speaking, reading, listening and mock progress.
 
-Local progress remains stored in browser `localStorage`.
+Firestore rules allow only the authenticated owner to read/write their own progress:
+
+```text
+match /users/{userId}/{document=**} {
+  allow read, write: if request.auth != null && request.auth.uid == userId;
+}
+```
+
+On sign-in, the app:
+
+- reads localStorage progress;
+- reads Firestore progress;
+- merges both without erasing non-empty progress;
+- saves the merged result to Firestore and localStorage;
+- starts a live Firestore listener.
+
+When signed out, the app continues to use localStorage only.
+
+## Sync Limitations
+
+- The sync is progress-focused and does not store private profile data.
+- Offline changes remain local until the next successful signed-in sync.
+- Cross-device sync must be proven with two real signed-in browser/device contexts before a release note should claim PASS.

@@ -153,7 +153,7 @@ npm run preview
 - Google вход через Firebase Auth доступен только при настроенном Firebase web config и включенном Google provider.
 - Backend приложения отсутствует.
 - Прогресс хранится в `localStorage` текущего браузера.
-- Cross-device progress sync не считается включенным, пока Firestore sync не будет отдельно проверен в production.
+- Для signed-in пользователей прогресс синхронизируется через Firestore по user-owned документу; без входа приложение продолжает работать через `localStorage`.
 - Пользователь может удалить прогресс через очистку данных сайта в браузере.
 
 ## Ограничения v0.1.0

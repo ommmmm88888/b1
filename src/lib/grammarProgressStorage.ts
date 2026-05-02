@@ -1,4 +1,5 @@
 import type { GrammarProgressState } from '../types/grammar'
+import { dispatchProgressChanged } from './progressEvents'
 
 const STORAGE_KEY = 'b1_grammar_progress_v0'
 
@@ -58,6 +59,7 @@ export function saveGrammarProgress(progress: GrammarProgressState): void {
   }
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
+  dispatchProgressChanged('grammar')
 }
 
 export function recordGrammarAttempt(

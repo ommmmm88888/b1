@@ -1,4 +1,5 @@
 import type { ListeningProgressState } from '../types/listening'
+import { dispatchProgressChanged } from './progressEvents'
 
 const STORAGE_KEY = 'b1_listening_progress_v0'
 
@@ -54,6 +55,7 @@ export function saveListeningProgress(progress: ListeningProgressState): void {
   }
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
+  dispatchProgressChanged('listening')
 }
 
 export function recordListeningResult(

@@ -82,14 +82,109 @@ describe('progressSync', () => {
     const merged = mergeProgressSnapshots(local, remote)
 
     expect(merged.sections.trainer.value).toEqual({ totalAttempts: 4 })
-    expect(merged.sections.grammar.value).toEqual({ totalAttempts: 1 })
+    expect(merged.sections.grammar.value).toEqual({
+      totalAttempts: 1,
+      correctAnswers: 0,
+      mistakesByTaskId: {},
+    })
     expect(merged.sections.intensive.value).toEqual({
       selectedDay: 3,
+      days: {},
       updatedAt: '2026-05-01T10:00:00.000Z',
     })
     expect(merged.sections.reading.value).toEqual({
       completedTaskIds: ['library'],
       bestScoresByTaskId: { library: 80 },
+    })
+  })
+
+  it('keeps the more advanced trainer counters when both devices have progress', () => {
+    const local = {
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:00:00.000Z',
+      sections: Object.fromEntries(
+        Object.entries(PROGRESS_STORAGE_KEYS).map(([section, key]) => [
+          section,
+          { key, value: null, updatedAt: null },
+        ]),
+      ),
+    } as ProgressSnapshot
+    const remote = structuredClone(local)
+
+    local.sections.trainer.value = {
+      totalAttempts: 2,
+      correctAnswers: 1,
+      mistakesByItem: { a: 1 },
+      lastSessionDate: null,
+      dailyCompletedCount: 0,
+      streak: 0,
+    }
+    remote.sections.trainer.value = {
+      totalAttempts: 5,
+      correctAnswers: 4,
+      mistakesByItem: { a: 0, b: 2 },
+      lastSessionDate: '2026-05-02',
+      dailyCompletedCount: 1,
+      streak: 1,
+    }
+
+    const merged = mergeProgressSnapshots(local, remote)
+
+    expect(merged.sections.trainer.value).toEqual({
+      totalAttempts: 5,
+      correctAnswers: 4,
+      mistakesByItem: { a: 1, b: 2 },
+      lastSessionDate: '2026-05-02',
+      dailyCompletedCount: 1,
+      streak: 1,
+    })
+  })
+
+  it('unions super intensive completed tasks without dropping notes', () => {
+    const local = {
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:00:00.000Z',
+      sections: Object.fromEntries(
+        Object.entries(PROGRESS_STORAGE_KEYS).map(([section, key]) => [
+          section,
+          { key, value: null, updatedAt: null },
+        ]),
+      ),
+    } as ProgressSnapshot
+    const remote = structuredClone(local)
+
+    local.sections.intensive.value = {
+      selectedDay: 1,
+      days: {
+        '1': {
+          completedTaskIds: ['a'],
+          note: 'local note',
+          updatedAt: '2026-05-02T10:00:00.000Z',
+        },
+      },
+      updatedAt: '2026-05-02T10:00:00.000Z',
+    }
+    remote.sections.intensive.value = {
+      selectedDay: 1,
+      days: {
+        '1': {
+          completedTaskIds: ['b'],
+          note: 'older remote note',
+          updatedAt: '2026-05-02T09:00:00.000Z',
+        },
+      },
+      updatedAt: '2026-05-02T09:00:00.000Z',
+    }
+
+    const merged = mergeProgressSnapshots(local, remote)
+
+    expect(merged.sections.intensive.value).toMatchObject({
+      days: {
+        '1': {
+          completedTaskIds: ['b', 'a'],
+          note: 'local note',
+        },
+      },
     })
   })
 })

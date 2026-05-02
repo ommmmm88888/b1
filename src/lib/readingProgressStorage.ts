@@ -1,4 +1,5 @@
 import type { ReadingProgressState } from '../types/reading'
+import { dispatchProgressChanged } from './progressEvents'
 
 const STORAGE_KEY = 'b1_reading_progress_v0'
 
@@ -54,6 +55,7 @@ export function saveReadingProgress(progress: ReadingProgressState): void {
   }
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
+  dispatchProgressChanged('reading')
 }
 
 export function recordReadingResult(

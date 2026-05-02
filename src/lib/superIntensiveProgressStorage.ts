@@ -1,4 +1,5 @@
 import type { SuperIntensiveDayProgress, SuperIntensiveProgressState } from '../types/intensive'
+import { dispatchProgressChanged } from './progressEvents'
 
 const STORAGE_KEY = 'b1_super_intensive_progress'
 const LEGACY_SELECTED_DAY_KEY = 'b1_super_intensive_selected_day'
@@ -87,6 +88,7 @@ export function loadSuperIntensiveProgress(): SuperIntensiveProgressState {
 
 export function saveSuperIntensiveProgress(progress: SuperIntensiveProgressState): void {
   globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(progress))
+  dispatchProgressChanged('intensive')
 }
 
 export function getDayProgress(

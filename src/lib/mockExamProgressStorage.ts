@@ -1,4 +1,5 @@
 import type { MockExamResult } from '../types/mockExam'
+import { dispatchProgressChanged } from './progressEvents'
 
 const STORAGE_KEY = 'b1_mock_exam_latest_result_v0'
 
@@ -66,6 +67,7 @@ export function saveLatestMockExamResult(result: MockExamResult): void {
   }
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(result))
+  dispatchProgressChanged('mock')
 }
 
 export function clearLatestMockExamResult(): void {
@@ -74,4 +76,5 @@ export function clearLatestMockExamResult(): void {
   }
 
   window.localStorage.removeItem(STORAGE_KEY)
+  dispatchProgressChanged('mock')
 }

@@ -1,4 +1,5 @@
 import type { SpeakingProgressState } from '../types/speaking'
+import { dispatchProgressChanged } from './progressEvents'
 
 const STORAGE_KEY = 'b1_speaking_progress_v0'
 
@@ -46,6 +47,7 @@ export function saveSpeakingProgress(progress: SpeakingProgressState): void {
   }
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
+  dispatchProgressChanged('speaking')
 }
 
 export function setSpeakingPromptCompleted(

@@ -8,16 +8,40 @@ import {
   subscribeAuthState,
   type AuthUser,
 } from '../../lib/auth'
+import {
+  startCloudProgressSync,
+  stopCloudProgressSync,
+  subscribeCloudSyncState,
+  type CloudSyncState,
+} from '../../lib/progressSync'
 
 type AccountStatus = 'idle' | 'signing-in' | 'failed' | 'unavailable'
 
 export function AccountSyncControl() {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [status, setStatus] = useState<AccountStatus>(isFirebaseConfigured ? 'idle' : 'unavailable')
+  const [syncState, setSyncState] = useState<CloudSyncState>({
+    status: 'idle',
+    message: '',
+    lastSyncedAt: null,
+  })
   const [message, setMessage] = useState('')
   const [showSetupInfo, setShowSetupInfo] = useState(false)
 
   useEffect(() => subscribeAuthState(setUser), [])
+  useEffect(() => subscribeCloudSyncState(setSyncState), [])
+  useEffect(() => {
+    if (!user) {
+      stopCloudProgressSync()
+      return
+    }
+
+    void startCloudProgressSync(user.uid)
+
+    return () => {
+      stopCloudProgressSync()
+    }
+  }, [user])
 
   if (!isFirebaseConfigured) {
     return (
@@ -57,6 +81,7 @@ export function AccountSyncControl() {
 
   async function handleSignOut() {
     await signOut()
+    stopCloudProgressSync()
     setStatus('idle')
     setMessage('')
   }
@@ -73,13 +98,23 @@ export function AccountSyncControl() {
   }
 
   const displayName = user.displayName || user.email || 'Google аккаунт'
+  const syncLabel =
+    syncState.status === 'active'
+      ? 'синхронизация включена'
+      : syncState.status === 'starting'
+        ? 'синхронизация...'
+        : syncState.status === 'failed' || syncState.status === 'unavailable'
+          ? syncState.message
+          : 'вход выполнен'
 
   return (
     <div className="account-sync" aria-label="Синхронизация">
       <span className="account-sync__user" title={displayName}>
         {displayName}
       </span>
-      <span className="account-sync__status">вход выполнен</span>
+      <span className="account-sync__status" title={syncState.lastSyncedAt ?? undefined}>
+        {syncLabel}
+      </span>
       <button className="account-sync__button" type="button" onClick={handleSignOut}>
         Выйти
       </button>

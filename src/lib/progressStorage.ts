@@ -1,4 +1,5 @@
 import type { ProgressState } from '../types/training'
+import { dispatchProgressChanged } from './progressEvents'
 
 const STORAGE_KEY = 'b1-polish-trainer-progress-v0'
 
@@ -67,6 +68,7 @@ export function saveProgress(progress: ProgressState): void {
   }
 
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
+  dispatchProgressChanged('trainer')
 }
 
 export function recordAttempt(
