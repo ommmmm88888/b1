@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v1-2026-05-02'
+const CACHE_VERSION = 'v1-2026-05-02b'
 const PRECACHE = `b1-precache-${CACHE_VERSION}`
 const RUNTIME = `b1-runtime-${CACHE_VERSION}`
 
