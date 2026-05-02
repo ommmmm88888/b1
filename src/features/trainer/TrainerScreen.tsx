@@ -72,13 +72,28 @@ function createSession(mode: SessionMode, progress: ProgressState): SessionState
 export function TrainerScreen() {
   const [progress, setProgress] = useState<ProgressState>(() => loadProgress())
   const [session, setSession] = useState<SessionState>(() => createSession('daily', loadProgress()))
-  const skipNextSaveRef = useRef(false)
+  const skipHydrationSaveRef = useRef(0)
+  const skipSyncSaveRef = useRef(false)
 
   const currentItem = session.items[session.currentIndex]
 
   useEffect(() => {
-    if (skipNextSaveRef.current) {
-      skipNextSaveRef.current = false
+    const timeoutId = window.setTimeout(() => {
+      skipHydrationSaveRef.current = 2
+      setProgress(loadProgress())
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [])
+
+  useEffect(() => {
+    if (skipHydrationSaveRef.current > 0) {
+      skipHydrationSaveRef.current -= 1
+      return
+    }
+
+    if (skipSyncSaveRef.current) {
+      skipSyncSaveRef.current = false
       return
     }
 
@@ -87,7 +102,7 @@ export function TrainerScreen() {
 
   useEffect(() => {
     const handleProgressSynced = () => {
-      skipNextSaveRef.current = true
+      skipSyncSaveRef.current = true
       setProgress(loadProgress())
     }
 

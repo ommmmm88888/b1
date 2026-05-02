@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  applyProgressSnapshot,
   collectLocalProgressSnapshot,
   mergeProgressSnapshots,
   PROGRESS_STORAGE_KEYS,
@@ -96,6 +97,125 @@ describe('progressSync', () => {
       completedTaskIds: ['library'],
       bestScoresByTaskId: { library: 80 },
     })
+  })
+
+  it('keeps cloud trainer progress when local trainer progress is empty', () => {
+    const local: ProgressSnapshot = {
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:00:00.000Z',
+      sections: Object.fromEntries(
+        Object.entries(PROGRESS_STORAGE_KEYS).map(([section, key]) => [
+          section,
+          { key, value: null, updatedAt: null },
+        ]),
+      ) as ProgressSnapshot['sections'],
+    }
+    const remote = structuredClone(local)
+
+    remote.sections.trainer.value = {
+      totalAttempts: 6,
+      correctAnswers: 4,
+      mistakesByItem: { greeting: 2 },
+      lastSessionDate: '2026-05-02',
+      dailyCompletedCount: 1,
+      streak: 1,
+    }
+
+    const merged = mergeProgressSnapshots(local, remote)
+
+    expect(merged.sections.trainer.value).toEqual(remote.sections.trainer.value)
+  })
+
+  it('keeps more advanced local trainer progress when cloud is empty', () => {
+    const local: ProgressSnapshot = {
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:00:00.000Z',
+      sections: Object.fromEntries(
+        Object.entries(PROGRESS_STORAGE_KEYS).map(([section, key]) => [
+          section,
+          { key, value: null, updatedAt: null },
+        ]),
+      ) as ProgressSnapshot['sections'],
+    }
+    const remote = structuredClone(local)
+
+    local.sections.trainer.value = {
+      totalAttempts: 3,
+      correctAnswers: 2,
+      mistakesByItem: { greeting: 1 },
+      lastSessionDate: null,
+      dailyCompletedCount: 0,
+      streak: 0,
+    }
+
+    const merged = mergeProgressSnapshots(local, remote)
+
+    expect(merged.sections.trainer.value).toEqual(local.sections.trainer.value)
+  })
+
+  it('does not erase cloud with empty phone trainer state', () => {
+    const local: ProgressSnapshot = {
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:00:00.000Z',
+      sections: Object.fromEntries(
+        Object.entries(PROGRESS_STORAGE_KEYS).map(([section, key]) => [
+          section,
+          { key, value: null, updatedAt: null },
+        ]),
+      ) as ProgressSnapshot['sections'],
+    }
+    const remote = structuredClone(local)
+
+    local.sections.trainer.value = {
+      totalAttempts: 0,
+      correctAnswers: 0,
+      mistakesByItem: {},
+      lastSessionDate: null,
+      dailyCompletedCount: 0,
+      streak: 0,
+    }
+    remote.sections.trainer.value = {
+      totalAttempts: 5,
+      correctAnswers: 4,
+      mistakesByItem: { greeting: 2 },
+      lastSessionDate: '2026-05-02',
+      dailyCompletedCount: 1,
+      streak: 1,
+    }
+
+    const merged = mergeProgressSnapshots(local, remote)
+
+    expect(merged.sections.trainer.value).toEqual(remote.sections.trainer.value)
+  })
+
+  it('writes remote trainer progress back to the same localStorage key TrainerScreen reads', () => {
+    window.localStorage.clear()
+
+    const snapshot: ProgressSnapshot = {
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:00:00.000Z',
+      sections: Object.fromEntries(
+        Object.entries(PROGRESS_STORAGE_KEYS).map(([section, key]) => [
+          section,
+          { key, value: null, updatedAt: null },
+        ]),
+      ) as ProgressSnapshot['sections'],
+    }
+
+    snapshot.sections.trainer.value = {
+      totalAttempts: 8,
+      correctAnswers: 6,
+      mistakesByItem: { greeting: 2 },
+      lastSessionDate: '2026-05-02',
+      dailyCompletedCount: 1,
+      streak: 2,
+    }
+
+    applyProgressSnapshot(snapshot)
+
+    expect(JSON.parse(window.localStorage.getItem(PROGRESS_STORAGE_KEYS.trainer) ?? 'null')).toEqual(
+      snapshot.sections.trainer.value,
+    )
   })
 
   it('keeps the more advanced trainer counters when both devices have progress', () => {
