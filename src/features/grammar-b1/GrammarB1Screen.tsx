@@ -1,17 +1,105 @@
 import { useMemo, useState } from 'react'
-import { normalizePolishAnswer } from '../../lib/answerCheck'
 import { grammarB1Blocks } from '../../data/grammarB1'
-import type { GrammarB1Block, GrammarB1QuizItem } from '../../types/grammarB1'
+import { normalizePolishAnswer } from '../../lib/answerCheck'
+import type { GrammarB1QuizItem } from '../../types/grammarB1'
 
 type AnswersState = Record<string, string>
 
-function isAnswerCorrect(candidate: string, acceptedAnswers: string[]): boolean {
-  const normalizedCandidate = normalizePolishAnswer(candidate)
+type ReferenceSectionId = 'cases' | 'declension' | 'verbs'
 
-  return acceptedAnswers.some(
-    (answer) => normalizePolishAnswer(answer) === normalizedCandidate,
-  )
+interface ReferenceSection {
+  id: ReferenceSectionId
+  title: string
+  quickTitle: string
+  when: string
+  rule: string
+  memory: string
+  mistake: string
+  example: string
+  translation: string
+  cta: string
+  status: 'ready' | 'soon'
+  note?: string
+  preview?: string[]
+  quiz: GrammarB1QuizItem[]
 }
+
+const readySections: ReferenceSection[] = [
+  {
+    id: 'cases',
+    title: 'Падежи без паники',
+    quickTitle: 'Если путаетесь в окончаниях',
+    when: 'Когда не понимаете, какой падеж нужен после предлога, глагола или отрицания.',
+    rule: 'Сначала ищите сигнал: nie mam / komu? / kogo? / z kim? / w / na / o.',
+    memory: 'Nie ma? Genitiv. Komu даю? Celownik. Widzę kogo/co? Biernik.',
+    mistake: 'После отрицания оставлять словарь-форму: mam czas → nie mam czasu.',
+    example: 'Nie mam czasu.',
+    translation: 'У меня нет времени.',
+    cta: 'Именно падеж чаще всего выручает в письме и в устной части.',
+    status: 'ready',
+    quiz: grammarB1Blocks.find((block) => block.id === 'cases')?.quiz ?? [],
+  },
+  {
+    id: 'declension',
+    title: 'Существительные и прилагательные',
+    quickTitle: 'Если сложно согласовать слова',
+    when: 'Когда нужно быстро согласовать род, число и падеж в фразе.',
+    rule: 'Прилагательное меняется вместе с существительным: добрый / dobra / dobre.',
+    memory: 'Męski, żeński, nijaki. W liczbie mnogiej: męskoosobowy / niemęskoosobowy.',
+    mistake: 'Писать по-русски логично, но по-польски неверно: w ładny mieście → w ładnym mieście.',
+    example: 'Mieszkam w ładnym mieście.',
+    translation: 'Я живу в красивом городе.',
+    cta: 'Если слово “звучит не так”, проверь окончание у прилагательного и у существительного вместе.',
+    status: 'ready',
+    quiz: grammarB1Blocks.find((block) => block.id === 'declension')?.quiz ?? [],
+  },
+  {
+    id: 'verbs',
+    title: 'Глаголы: время, вид, управление',
+    quickTitle: 'Если не хватает точности в речи',
+    when: 'Когда нужно сказать, идёт ли действие сейчас, повторяется ли оно или уже завершено.',
+    rule: 'Сначала выбери: процесс (co robić?) или результат (co zrobić?). Потом — нужную форму.',
+    memory: 'Jutro przeczytam = результат. Jutro będę czytać = процесс.',
+    mistake: 'Смешивать завершённое будущее и процесс: będę przeczytać — неправильно.',
+    example: 'Jutro napiszę e-mail.',
+    translation: 'Завтра я напишу e-mail.',
+    cta: 'Для B1 особенно важны być, mieć, iść, móc и пара видовых форм.',
+    status: 'ready',
+    quiz: grammarB1Blocks.find((block) => block.id === 'verbs')?.quiz ?? [],
+  },
+]
+
+const upcomingSections: Array<{
+  id: string
+  title: string
+  subtitle: string
+  note: string
+}> = [
+  {
+    id: 'pronouns-sie',
+    title: 'Местоимения и частица się',
+    subtitle: 'Краткие формы, порядок слов и типичные глаголы.',
+    note: 'mnie / mi, tobie / ci, jego / go, bać się, uczyć się, podobać się.',
+  },
+  {
+    id: 'prepositions-cases',
+    title: 'Предлоги и типичные связки',
+    subtitle: 'do, z, na, w, o, przy, po, dla, bez, od.',
+    note: 'Особенно полезно для письма и говорения.',
+  },
+  {
+    id: 'contrast',
+    title: 'Чем польский отличается от русского и украинского',
+    subtitle: 'Ложные друзья и привычки, которые мешают.',
+    note: 'aktualny, dywan, uroda, sklep, ударение и формы прошедшего времени.',
+  },
+  {
+    id: 'exam-tasks',
+    title: 'Типичные задания B1',
+    subtitle: 'Что повторить перед экзаменом.',
+    note: 'Клише для письма, фразы для ответа и короткие стратегии.',
+  },
+]
 
 function GrammarMiniTest({
   blockId,
@@ -22,34 +110,33 @@ function GrammarMiniTest({
 }) {
   const [answers, setAnswers] = useState<AnswersState>({})
   const [revealed, setRevealed] = useState(false)
+
   const score = useMemo(
-    () => questions.filter((question) => isAnswerCorrect(answers[question.prompt] ?? '', question.acceptedAnswers)).length,
+    () =>
+      questions.filter(
+        (question) =>
+          questions.length > 0 &&
+          question.acceptedAnswers.some(
+            (answer) => normalizePolishAnswer(answer) === normalizePolishAnswer(answers[question.prompt] ?? ''),
+          ),
+      ).length,
     [answers, questions],
   )
 
-  function handleCheck() {
-    setRevealed(true)
-  }
-
-  function handleReset() {
-    setAnswers({})
-    setRevealed(false)
-  }
-
   return (
-    <section className="card-stage grammar-b1-mini-test" aria-labelledby={`${blockId}-quiz-title`}>
+    <section className="card-stage grammar-ref-mini" aria-labelledby={`${blockId}-quiz-title`}>
       <div className="card-stage__header">
-        <span className="card-stage__category">Мини-тест</span>
-        <h3 id={`${blockId}-quiz-title`}>Проверьте себя</h3>
-        <p className="muted">
-          Ответы скрыты до проверки. После проверки показывается ваш результат и правильные формы.
-        </p>
+        <span className="card-stage__category">Мини-проверка</span>
+        <h3 id={`${blockId}-quiz-title`}>Проверь себя</h3>
+        <p className="muted">Ответы скрыты до действия пользователя.</p>
       </div>
 
-      <div className="grammar-b1-mini-test__list">
+      <div className="grammar-ref-mini__list">
         {questions.map((question, index) => {
           const value = answers[question.prompt] ?? ''
-          const correct = isAnswerCorrect(value, question.acceptedAnswers)
+          const isCorrect = question.acceptedAnswers.some(
+            (answer) => normalizePolishAnswer(answer) === normalizePolishAnswer(value),
+          )
 
           return (
             <label className="note-field" key={question.prompt}>
@@ -70,7 +157,7 @@ function GrammarMiniTest({
               />
               {revealed ? (
                 <div className="card-stage__answer">
-                  <strong>{correct ? 'Верно.' : 'Нужно:'}</strong> {question.acceptedAnswers.join(' / ')}
+                  <strong>{isCorrect ? 'Верно.' : 'Нужно:'}</strong> {question.acceptedAnswers.join(' / ')}
                   {question.note ? ` — ${question.note}` : ''}
                 </div>
               ) : null}
@@ -80,10 +167,17 @@ function GrammarMiniTest({
       </div>
 
       <div className="button-row">
-        <button className="button button--primary" type="button" onClick={handleCheck}>
+        <button className="button button--primary" type="button" onClick={() => setRevealed(true)}>
           Проверить себя
         </button>
-        <button className="button" type="button" onClick={handleReset}>
+        <button
+          className="button"
+          type="button"
+          onClick={() => {
+            setAnswers({})
+            setRevealed(false)
+          }}
+        >
           Скрыть ответы
         </button>
       </div>
@@ -97,172 +191,152 @@ function GrammarMiniTest({
   )
 }
 
-function GrammarBlockCard({ block, index }: { block: GrammarB1Block; index: number }) {
-  if (block.status === 'soon') {
-    return (
-      <section className="card-stage grammar-b1-block" id={block.id} aria-labelledby={`${block.id}-title`}>
-        <div className="card-stage__header">
-          <span className="card-stage__category">Скоро</span>
-          <h2 id={`${block.id}-title`}>{block.title}</h2>
-          <p className="muted">{block.subtitle}</p>
-        </div>
-        {block.intro.map((line) => (
-          <p key={line} className="muted">
-            {line}
-          </p>
-        ))}
-        {block.preview?.length ? (
-          <div className="card-stage__hint">
-            <strong>Что будет внутри:</strong>
-            <ul className="plan-list">
-              {block.preview.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </section>
-    )
-  }
-
+function ReferenceSectionCard({ section }: { section: ReferenceSection }) {
   return (
-    <details className="grammar-b1-block practice-help-details" id={block.id} open={index === 0}>
-      <summary>
-        <span>{block.title}</span>
-        <small>{block.subtitle}</small>
-      </summary>
-      <div className="practice-help-details__content grammar-b1-block__content">
-        {block.intro.map((line) => (
-          <p key={line} className="muted">
-            {line}
-          </p>
-        ))}
-
-        {block.tables.map((table) => (
-          <section className="card-stage grammar-b1-card" key={table.title}>
-            <div className="card-stage__header">
-              <span className="card-stage__category">Таблица</span>
-              <h3>{table.title}</h3>
-              {table.note ? <p className="muted">{table.note}</p> : null}
-            </div>
-            <div className="grammar-b1-table-wrap" role="region" aria-label={table.title}>
-              <table className="grammar-b1-table">
-                <thead>
-                  <tr>
-                    {table.columns.map((column) => (
-                      <th key={column}>{column}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {table.rows.map((row, rowIndex) => (
-                    <tr key={`${table.title}-${rowIndex}`}>
-                      {row.map((cell, cellIndex) => (
-                        <td key={`${table.title}-${rowIndex}-${cellIndex}`}>{cell}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ))}
-
-        {block.mnemonic.length ? (
-          <section className="card-stage grammar-b1-card">
-            <div className="card-stage__header">
-              <span className="card-stage__category">Мнемоника</span>
-              <h3>Как запомнить</h3>
-            </div>
-            <ul className="plan-list">
-              {block.mnemonic.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {block.examples.length ? (
-          <section className="card-stage grammar-b1-card">
-            <div className="card-stage__header">
-              <span className="card-stage__category">Примеры</span>
-              <h3>Примеры с переводом</h3>
-            </div>
-            <div className="grammar-b1-examples">
-              {block.examples.map((example) => (
-                <div className="card-stage__hint" key={example.pl}>
-                  <strong>{example.pl}</strong>
-                  <div className="muted">{example.ru}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {block.quiz.length ? <GrammarMiniTest blockId={block.id} questions={block.quiz} /> : null}
+    <article className="card-stage grammar-ref-card" id={section.id}>
+      <div className="card-stage__header">
+        <span className="card-stage__category">
+          {section.status === 'ready' ? 'Готово' : 'Скоро'}
+        </span>
+        <h2>{section.title}</h2>
+        <p className="muted">{section.quickTitle}</p>
       </div>
-    </details>
+
+      <div className="grammar-ref-card__grid">
+        <div className="grammar-ref-card__tile">
+          <span>Когда это нужно</span>
+          <strong>{section.when}</strong>
+        </div>
+        <div className="grammar-ref-card__tile">
+          <span>Главное правило</span>
+          <strong>{section.rule}</strong>
+        </div>
+        <div className="grammar-ref-card__tile">
+          <span>Как запомнить</span>
+          <strong>{section.memory}</strong>
+        </div>
+        <div className="grammar-ref-card__tile">
+          <span>Частая ошибка</span>
+          <strong>{section.mistake}</strong>
+        </div>
+      </div>
+
+      <div className="card-stage__answer">
+        <strong>Правильно по-польски:</strong> {section.example} — {section.translation}
+      </div>
+
+      <div className="card-stage__hint">
+        <strong>Зачем это знать:</strong> {section.cta}
+      </div>
+
+      <GrammarMiniTest blockId={section.id} questions={section.quiz} />
+    </article>
+  )
+}
+
+function UpcomingSectionCard({ id, title, subtitle, note }: { id: string; title: string; subtitle: string; note: string }) {
+  return (
+    <article className="card-stage grammar-ref-card grammar-ref-card--soon" id={id}>
+      <div className="card-stage__header">
+        <span className="card-stage__category">Скоро</span>
+        <h2>{title}</h2>
+        <p className="muted">{subtitle}</p>
+      </div>
+      <div className="card-stage__hint">
+        <strong>Что будет внутри:</strong> {note}
+      </div>
+    </article>
   )
 }
 
 export function GrammarB1Screen() {
-  const readyCount = grammarB1Blocks.filter((block) => block.status === 'ready').length
-  const soonCount = grammarB1Blocks.length - readyCount
+  const readyCount = readySections.length
+  const soonCount = upcomingSections.length
 
   return (
     <main className="app-shell">
       <div className="app-shell__grid">
-        <section className="hero-card" aria-labelledby="grammar-b1-title">
-          <div className="hero-card__eyebrow">B1 · грамматика · структурированный разбор</div>
-          <h1 id="grammar-b1-title">Грамматика B1</h1>
+        <section className="hero-card" aria-labelledby="grammar-ref-title">
+          <div className="hero-card__eyebrow">B1 · справочник · коротко и по делу</div>
+          <h1 id="grammar-ref-title">Справочник польского B1</h1>
           <p>
-            Шпаргалка и мини-практика по ключевым темам B1: падежи, склонение, глаголы и
-            будущие разделы. Материал рассчитан на чтение с телефона и с десктопа.
+            Короткие объяснения, примеры и мини-проверки без лишней теории. Здесь удобно быстро
+            повторить то, что чаще всего путается в реальном B1.
           </p>
           <div className="hero-card__meta">
             <div className="pill">
-              <strong>Готово:</strong>
-              <span>{readyCount} блока</span>
+              <strong>Быстрый повтор:</strong>
+              <span>{readyCount} темы</span>
             </div>
             <div className="pill">
-              <strong>Скоро:</strong>
-              <span>{soonCount} блока</span>
+              <strong>В очереди:</strong>
+              <span>{soonCount} тем</span>
+            </div>
+            <div className="pill">
+              <strong>Фокус:</strong>
+              <span>ошибки украинцев и русскоязычных</span>
             </div>
             <div className="pill">
               <strong>Формат:</strong>
-              <span>теория · таблицы · мнемоника · примеры · тест</span>
+              <span>примеры с переводом</span>
             </div>
           </div>
         </section>
 
         <aside className="side-card">
-          <h2>Навигация</h2>
-          <p>Первые три блока уже наполнены материалом. Остальные разделы подготовлены структурно.</p>
-          <div className="topic-picker" role="navigation" aria-label="Быстрый переход по грамматике B1">
-            {grammarB1Blocks.map((block) => (
+          <h2>Что повторить быстро</h2>
+          <p>Три самых полезных точки входа для повторения без перегруза.</p>
+          <div className="grammar-ref-quick-grid">
+            {readySections.map((section) => (
               <button
-                className={`topic-chip ${block.id === 'cases' ? 'topic-chip--active' : ''}`}
+                className="grammar-ref-quick"
                 type="button"
-                key={block.id}
-                onClick={() => document.getElementById(block.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                key={section.id}
+                onClick={() =>
+                  document.getElementById(section.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
               >
-                <span>{block.title}</span>
-                <small>{block.status === 'ready' ? 'готово' : 'скоро'}</small>
+                <span>{section.quickTitle}</span>
+                <strong>{section.title}</strong>
               </button>
             ))}
           </div>
           <div className="side-card__stats">
             <div className="stat">
-              <strong>Подсказка</strong>
-              <div className="muted">Разверните блок и проверьте себя в мини-тесте.</div>
+              <strong>Как пользоваться</strong>
+              <div className="muted">Откройте тему, прочитайте 2–3 коротких блока и проверьте себя.</div>
             </div>
           </div>
         </aside>
 
-        <section className="trainer-card trainer-card--compact grammar-b1-main" aria-label="Содержание грамматики B1">
-          {grammarB1Blocks.map((block, index) => (
-            <GrammarBlockCard block={block} index={index} key={block.id} />
-          ))}
+        <section className="trainer-card trainer-card--compact grammar-ref-main" aria-label="Справочник польского B1">
+          <div className="grammar-ref-section-title">
+            <div>
+              <span className="card-stage__category">Быстрый повтор</span>
+              <h2>Что повторить прямо сейчас</h2>
+            </div>
+            <p className="muted">Если вы путаетесь в окончаниях, согласовании или глаголах, начните отсюда.</p>
+          </div>
+
+          <div className="grammar-ref-topics">
+            {readySections.map((section) => (
+              <ReferenceSectionCard section={section} key={section.id} />
+            ))}
+          </div>
+
+          <div className="grammar-ref-section-title">
+            <div>
+              <span className="card-stage__category">В разработке</span>
+              <h2>Следующие темы</h2>
+            </div>
+            <p className="muted">Структура уже готова, материал будет добавляться без перестройки экрана.</p>
+          </div>
+
+          <div className="grammar-ref-topics grammar-ref-topics--soon">
+            {upcomingSections.map((section) => (
+              <UpcomingSectionCard key={section.id} {...section} />
+            ))}
+          </div>
         </section>
       </div>
     </main>

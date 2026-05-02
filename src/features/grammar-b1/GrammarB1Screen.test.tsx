@@ -13,10 +13,14 @@ describe('GrammarB1Screen', () => {
     const user = userEvent.setup()
     render(<GrammarB1Screen />)
 
-    expect(screen.getByRole('heading', { name: 'Грамматика B1' })).toBeInTheDocument()
-    expect(screen.getAllByText('Падежи')[0]).toBeInTheDocument()
-    expect(screen.getByText('7 przypadków')).toBeInTheDocument()
-    expect(screen.getByText('Mieszkam w ładnym mieście.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Справочник польского B1' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Что повторить быстро' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Падежи без паники' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Существительные и прилагательные' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Глаголы: время, вид, управление' })).toBeInTheDocument()
+    expect(
+      screen.getAllByText((_, element) => element?.textContent?.includes('Mieszkam w ładnym mieście.') ?? false).length,
+    ).toBeGreaterThan(0)
 
     expect(screen.queryByText('Нужно:')).not.toBeInTheDocument()
 

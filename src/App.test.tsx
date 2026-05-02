@@ -20,12 +20,14 @@ describe('App navigation', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('navigation', { name: 'Основные разделы' })).toBeInTheDocument()
+    const primaryNav = screen.getByRole('navigation', { name: 'Основные разделы' })
     const header = screen.getByRole('banner')
     expect(within(header).getByLabelText('B1')).toBeInTheDocument()
     expect(within(header).getByRole('button', { name: 'Google вход' })).toBeInTheDocument()
     expect(within(header).getByText('не настроено')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Тренировка' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(primaryNav).getAllByRole('button').at(-1)).toHaveTextContent('Справочник')
+    expect(screen.queryByRole('button', { name: 'Грамматика B1' })).not.toBeInTheDocument()
 
     await user.click(within(header).getByRole('button', { name: 'Google вход' }))
 
@@ -33,11 +35,12 @@ describe('App navigation', () => {
       within(header).getByText(/Синхронизация между устройствами появится после настройки Firebase\./),
     ).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Грамматика B1' }))
+    await user.click(screen.getByRole('button', { name: 'Справочник' }))
 
-    expect(screen.getByRole('button', { name: 'Грамматика B1' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('heading', { name: 'Грамматика B1' })).toBeInTheDocument()
-    expect(screen.getAllByText('Падежи')[0]).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Справочник' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('heading', { name: 'Справочник польского B1' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Что повторить быстро' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Падежи без паники' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Пробный экзамен' }))
 

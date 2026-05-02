@@ -26,12 +26,12 @@ const modes: { id: AppMode; label: string }[] = [
   { id: 'trainer', label: 'Тренировка' },
   { id: 'intensive', label: 'Интенсив' },
   { id: 'grammar', label: 'Грамматика' },
-  { id: 'grammar-b1', label: 'Грамматика B1' },
   { id: 'writing', label: 'Письмо' },
   { id: 'speaking', label: 'Говорение' },
   { id: 'reading', label: 'Чтение' },
   { id: 'listening', label: 'Аудирование' },
   { id: 'mock', label: 'Пробный экзамен' },
+  { id: 'grammar-b1', label: 'Справочник' },
 ]
 
 function App() {
