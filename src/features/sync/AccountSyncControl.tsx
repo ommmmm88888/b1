@@ -10,6 +10,7 @@ import {
   type AuthUser,
 } from '../../lib/auth'
 import { PROGRESS_CHANGED_EVENT, PROGRESS_SYNCED_EVENT } from '../../lib/progressEvents'
+import { loadGrammarProgress } from '../../lib/grammarProgressStorage'
 import { loadProgress } from '../../lib/progressStorage'
 import { loadTrainerSessionSnapshot } from '../../lib/trainerSessionStorage'
 import {
@@ -21,6 +22,7 @@ import {
   stopCloudProgressSync,
   subscribeCloudSyncState,
   subscribeSyncDiagnostics,
+  summarizeGrammarProgress,
   summarizeTrainerProgress,
   summarizeTrainerSession,
   type CloudSyncState,
@@ -52,6 +54,7 @@ export function AccountSyncControl() {
   const [showSetupInfo, setShowSetupInfo] = useState(false)
   const [diagnostics, setDiagnostics] = useState<SyncDiagnosticsState>(getSyncDiagnostics())
   const [localTrainer, setLocalTrainer] = useState(() => summarizeTrainerProgress(loadProgress()))
+  const [localGrammar, setLocalGrammar] = useState(() => summarizeGrammarProgress(loadGrammarProgress()))
   const [localTrainerSession, setLocalTrainerSession] = useState(() => summarizeTrainerSession(loadTrainerSessionSnapshot()))
   const [manualMessage, setManualMessage] = useState('')
   const proofMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('syncProof')
@@ -62,6 +65,7 @@ export function AccountSyncControl() {
   useEffect(() => {
     const refreshLocalTrainer = () => {
       setLocalTrainer(summarizeTrainerProgress(loadProgress()))
+      setLocalGrammar(summarizeGrammarProgress(loadGrammarProgress()))
       setLocalTrainerSession(summarizeTrainerSession(loadTrainerSessionSnapshot()))
     }
 
@@ -243,6 +247,10 @@ export function AccountSyncControl() {
             <strong>{`a:${localTrainer.attempts} c:${localTrainer.correctAnswers} m:${localTrainer.mistakeTotal} d:${localTrainer.dailyCompletedCount} s:${localTrainer.streak} @${formatSyncTime(localTrainer.updatedAt)}`}</strong>
           </div>
           <div className="account-sync__diagnostic">
+            <span>Local grammar</span>
+            <strong>{localGrammar ? `a:${localGrammar.attempts} c:${localGrammar.correctAnswers} m:${localGrammar.mistakeTotal} @${formatSyncTime(localGrammar.updatedAt)}` : 'нет'}</strong>
+          </div>
+          <div className="account-sync__diagnostic">
             <span>Local session</span>
             <strong>
               {localTrainerSession
@@ -257,6 +265,14 @@ export function AccountSyncControl() {
             <strong>
               {cloudTrainer
                 ? `a:${cloudTrainer.attempts} c:${cloudTrainer.correctAnswers} m:${cloudTrainer.mistakeTotal} d:${cloudTrainer.dailyCompletedCount} s:${cloudTrainer.streak} @${formatSyncTime(cloudTrainer.updatedAt)}`
+                : 'нет'}
+            </strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Cloud grammar</span>
+            <strong>
+              {diagnostics.cloudGrammar
+                ? `a:${diagnostics.cloudGrammar.attempts} c:${diagnostics.cloudGrammar.correctAnswers} m:${diagnostics.cloudGrammar.mistakeTotal} @${formatSyncTime(diagnostics.cloudGrammar.updatedAt)}`
                 : 'нет'}
             </strong>
           </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { grammarDrills, grammarTopics } from '../../data/grammarDrills'
 import { isAnswerCorrect } from '../../lib/answerCheck'
 import { applyAnswerEditForRetry } from '../../lib/answerRetryState'
@@ -8,6 +8,14 @@ import {
   recordGrammarAttempt,
   saveGrammarProgress,
 } from '../../lib/grammarProgressStorage'
+import { PROGRESS_SYNCED_EVENT } from '../../lib/progressEvents'
+import { requestActiveCloudProgressSave, subscribeCloudSyncState } from '../../lib/progressSync'
+import {
+  createGrammarSessionSnapshot,
+  loadGrammarSessionSnapshot,
+  saveGrammarSessionSnapshot,
+  type GrammarSessionSnapshot,
+} from '../../lib/grammarSessionStorage'
 import type { GrammarTask, GrammarTopicId } from '../../types/grammar'
 
 interface GrammarSession {
@@ -28,13 +36,50 @@ function createSession(topicId: GrammarTopicId): GrammarSession {
   }
 }
 
+function createSessionFromSnapshot(snapshot: GrammarSessionSnapshot | null): GrammarSession {
+  if (!snapshot) {
+    return createSession(grammarTopics[0].id)
+  }
+
+  const topicExists = grammarTopics.some((topic) => topic.id === snapshot.topicId)
+  if (!topicExists) {
+    return createSession(grammarTopics[0].id)
+  }
+
+  const topicId = snapshot.topicId as GrammarTopicId
+
+  return {
+    topicId,
+    taskIndex: snapshot.taskIndex,
+    answer: snapshot.answer,
+    checked: snapshot.checked,
+    correct: snapshot.correct,
+  }
+}
+
+function createSessionSnapshot(session: GrammarSession): GrammarSessionSnapshot {
+  return createGrammarSessionSnapshot({
+    topicId: session.topicId,
+    taskIndex: session.taskIndex,
+    answer: session.answer,
+    checked: session.checked,
+    correct: session.correct,
+  })
+}
+
 function getTasksByTopic(topicId: GrammarTopicId): GrammarTask[] {
   return grammarDrills.filter((task) => task.topicId === topicId)
 }
 
 export function GrammarDrillScreen() {
   const [progress, setProgress] = useState(() => loadGrammarProgress())
-  const [session, setSession] = useState<GrammarSession>(() => createSession(grammarTopics[0].id))
+  const [session, setSession] = useState<GrammarSession>(() => createSessionFromSnapshot(loadGrammarSessionSnapshot()))
+  const answerInputRef = useRef<HTMLInputElement | null>(null)
+  const nextButtonRef = useRef<HTMLButtonElement | null>(null)
+  const choiceInputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const skipHydrationSaveRef = useRef(0)
+  const skipProgressSyncSaveRef = useRef(false)
+  const skipSessionSyncSaveRef = useRef(true)
 
   const topic = grammarTopics.find((item) => item.id === session.topicId) ?? grammarTopics[0]
   const topicTasks = useMemo(() => getTasksByTopic(session.topicId), [session.topicId])
@@ -47,12 +92,106 @@ export function GrammarDrillScreen() {
   const expectedAnswer = currentTask?.acceptedAnswers[0] ?? ''
   const answerDiff = buildAnswerDiff(session.answer, expectedAnswer)
 
+  const refreshProgressFromStorage = useCallback(() => {
+    skipProgressSyncSaveRef.current = true
+    skipSessionSyncSaveRef.current = true
+    setProgress(loadGrammarProgress())
+    setSession(createSessionFromSnapshot(loadGrammarSessionSnapshot()))
+  }, [])
+
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      skipHydrationSaveRef.current = 2
+      refreshProgressFromStorage()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [refreshProgressFromStorage])
+
+  useEffect(() => {
+    if (skipHydrationSaveRef.current > 0) {
+      skipHydrationSaveRef.current -= 1
+      return
+    }
+
+    if (skipProgressSyncSaveRef.current) {
+      skipProgressSyncSaveRef.current = false
+      saveGrammarProgress(progress)
+      return
+    }
+
     saveGrammarProgress(progress)
+    requestActiveCloudProgressSave()
   }, [progress])
 
+  useEffect(() => {
+    if (skipSessionSyncSaveRef.current) {
+      skipSessionSyncSaveRef.current = false
+      return
+    }
+
+    saveGrammarSessionSnapshot(createSessionSnapshot(session), window.localStorage, { notify: false })
+    requestActiveCloudProgressSave()
+  }, [session])
+
+  useEffect(() => {
+    const handleSynced = () => {
+      refreshProgressFromStorage()
+    }
+
+    window.addEventListener(PROGRESS_SYNCED_EVENT, handleSynced)
+    return () => window.removeEventListener(PROGRESS_SYNCED_EVENT, handleSynced)
+  }, [refreshProgressFromStorage])
+
+  useEffect(() => {
+    const unsubscribe = subscribeCloudSyncState((state) => {
+      if (state.status === 'active') {
+        refreshProgressFromStorage()
+      }
+    })
+
+    return unsubscribe
+  }, [refreshProgressFromStorage])
+
+  useEffect(() => {
+    const handleFocus = () => refreshProgressFromStorage()
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshProgressFromStorage()
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [refreshProgressFromStorage])
+
+  useEffect(() => {
+    if (session.checked) {
+      nextButtonRef.current?.focus()
+      return
+    }
+
+    if (currentTask?.answerMode === 'choice') {
+      const selectedChoice = choiceInputRefs.current.find((input) => input?.checked) ?? choiceInputRefs.current[0]
+      selectedChoice?.focus()
+      return
+    }
+
+    answerInputRef.current?.focus()
+  }, [currentTask?.answerMode, session.checked, session.taskIndex, session.topicId])
+
   function handleSelectTopic(topicId: GrammarTopicId) {
-    setSession(createSession(topicId))
+    const nextSession = createSession(topicId)
+
+    skipSessionSyncSaveRef.current = true
+    saveGrammarSessionSnapshot(createSessionSnapshot(nextSession), window.localStorage, { notify: false })
+    setSession(nextSession)
+    requestActiveCloudProgressSave()
   }
 
   function handleCheck() {
@@ -62,23 +201,67 @@ export function GrammarDrillScreen() {
 
     const candidate = currentTask.answerMode === 'choice' ? session.answer : session.answer.trim()
     const correct = isAnswerCorrect(candidate, currentTask.acceptedAnswers)
-
-    setProgress((current) => recordGrammarAttempt(current, currentTask.id, correct))
-    setSession((current) => ({
-      ...current,
+    const nextSession = {
+      ...session,
       checked: true,
       correct,
-    }))
+    }
+
+    setProgress((current) => recordGrammarAttempt(current, currentTask.id, correct))
+    skipSessionSyncSaveRef.current = true
+    saveGrammarSessionSnapshot(createSessionSnapshot(nextSession), window.localStorage, { notify: false })
+    setSession(nextSession)
+    requestActiveCloudProgressSave()
+
+    window.setTimeout(() => {
+      nextButtonRef.current?.focus()
+    }, 0)
   }
 
   function handleNext() {
-    setSession((current) => ({
-      ...current,
-      taskIndex: topicTasks.length > 0 ? (current.taskIndex + 1) % topicTasks.length : 0,
+    const nextSession = {
+      ...session,
+      taskIndex: topicTasks.length > 0 ? (session.taskIndex + 1) % topicTasks.length : 0,
       answer: '',
       checked: false,
       correct: null,
-    }))
+    }
+
+    skipSessionSyncSaveRef.current = true
+    saveGrammarSessionSnapshot(createSessionSnapshot(nextSession), window.localStorage, { notify: false })
+    setSession(nextSession)
+    requestActiveCloudProgressSave()
+
+  }
+
+  function handleAnswerKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter') {
+      return
+    }
+
+    event.preventDefault()
+
+    if (session.checked) {
+      handleNext()
+      return
+    }
+
+    handleCheck()
+  }
+
+  function handleChoiceKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter') {
+      return
+    }
+
+    event.preventDefault()
+
+    if (session.checked) {
+      handleNext()
+      return
+    }
+
+    handleCheck()
   }
 
   return (
@@ -179,7 +362,7 @@ export function GrammarDrillScreen() {
 
               {currentTask.answerMode === 'choice' && currentTask.choices ? (
                 <div className="choice-list" role="radiogroup" aria-label="Варианты ответа">
-                  {currentTask.choices.map((choice) => {
+                  {currentTask.choices.map((choice, index) => {
                     const isSelected = session.answer === choice
                     const isCorrectChoice = currentTask.acceptedAnswers.includes(choice)
                     const isWrongSelection = session.checked && !session.correct && isSelected
@@ -192,6 +375,9 @@ export function GrammarDrillScreen() {
                         key={choice}
                       >
                         <input
+                          ref={(element) => {
+                            choiceInputRefs.current[index] = element
+                          }}
                           type="radio"
                           name={currentTask.id}
                           value={choice}
@@ -202,6 +388,7 @@ export function GrammarDrillScreen() {
 
                             setSession((current) => applyAnswerEditForRetry(current, answer))
                           }}
+                          onKeyDown={handleChoiceKeyDown}
                         />
                         <span className="choice-item__text">{choice}</span>
                         <span className="choice-item__badges" aria-hidden="true">
@@ -224,8 +411,10 @@ export function GrammarDrillScreen() {
                 <div className="input-row">
                   <label htmlFor="grammar-answer">Введите польскую форму</label>
                   <input
+                    ref={answerInputRef}
                     id="grammar-answer"
                     value={session.answer}
+                    onKeyDown={handleAnswerKeyDown}
                     onChange={(event) => {
                       const answer = event.target.value
 
@@ -247,7 +436,7 @@ export function GrammarDrillScreen() {
                 >
                   Проверить
                 </button>
-                <button className="button" type="button" onClick={handleNext} disabled={!session.checked}>
+                <button ref={nextButtonRef} className="button" type="button" onClick={handleNext} disabled={!session.checked}>
                   Следующее
                 </button>
               </div>

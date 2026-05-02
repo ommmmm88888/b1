@@ -11,6 +11,12 @@ import {
   saveTrainerSessionSnapshot,
   type TrainerSessionSnapshot,
 } from './trainerSessionStorage'
+import { loadGrammarProgress } from './grammarProgressStorage'
+import {
+  loadGrammarSessionSnapshot,
+  saveGrammarSessionSnapshot,
+  type GrammarSessionSnapshot,
+} from './grammarSessionStorage'
 
 export const PROGRESS_STORAGE_KEYS = {
   trainer: 'b1-polish-trainer-progress-v0',
@@ -36,6 +42,7 @@ export type ProgressSnapshot = {
   capturedAt: string
   sections: Record<ProgressSection, ProgressSectionSnapshot>
   trainerSession?: TrainerSessionSnapshot | null
+  grammarSession?: GrammarSessionSnapshot | null
 }
 
 export type SyncResult =
@@ -62,12 +69,26 @@ export type TrainerProgressSummary = {
   updatedAt: string | null
 }
 
+export type GrammarProgressSummary = {
+  attempts: number
+  correctAnswers: number
+  mistakeTotal: number
+  updatedAt: string | null
+}
+
 export type TrainerSessionSummary = {
   mode: TrainerSessionSnapshot['mode']
   currentIndex: number
   itemCount: number
   checked: boolean
   finished: boolean
+  updatedAt: string | null
+}
+
+export type GrammarSessionSummary = {
+  topicId: string
+  taskIndex: number
+  checked: boolean
   updatedAt: string | null
 }
 
@@ -80,8 +101,12 @@ export type SyncDiagnosticsState = {
   lastCloudWriteAt: string | null
   lastSyncError: string | null
   cloudTrainer: TrainerProgressSummary | null
+  localGrammar: GrammarProgressSummary | null
+  cloudGrammar: GrammarProgressSummary | null
   localTrainerSession: TrainerSessionSummary | null
   cloudTrainerSession: TrainerSessionSummary | null
+  localGrammarSession: GrammarSessionSummary | null
+  cloudGrammarSession: GrammarSessionSummary | null
   cacheVersion: string
 }
 
@@ -113,8 +138,12 @@ const defaultSyncDiagnosticsState: SyncDiagnosticsState = {
   lastCloudWriteAt: null,
   lastSyncError: null,
   cloudTrainer: null,
+  localGrammar: null,
+  cloudGrammar: null,
   localTrainerSession: null,
   cloudTrainerSession: null,
+  localGrammarSession: null,
+  cloudGrammarSession: null,
   cacheVersion: SERVICE_WORKER_CACHE_VERSION,
 }
 
@@ -236,6 +265,64 @@ export function summarizeTrainerSession(value: unknown): TrainerSessionSummary |
   }
 }
 
+function isGrammarProgressSnapshot(value: unknown): value is {
+  totalAttempts: number
+  correctAnswers: number
+  mistakesByTaskId: Record<string, number>
+  updatedAt?: unknown
+} {
+  return (
+    isRecord(value) &&
+    typeof value.totalAttempts === 'number' &&
+    typeof value.correctAnswers === 'number' &&
+    isRecord(value.mistakesByTaskId)
+  )
+}
+
+export function summarizeGrammarProgress(value: unknown): GrammarProgressSummary | null {
+  if (!isGrammarProgressSnapshot(value)) {
+    return null
+  }
+
+  const mistakeTotal = Object.values(value.mistakesByTaskId).reduce(
+    (sum, mistakeCount) => sum + (typeof mistakeCount === 'number' ? mistakeCount : 0),
+    0,
+  )
+
+  return {
+    attempts: value.totalAttempts,
+    correctAnswers: value.correctAnswers,
+    mistakeTotal,
+    updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : null,
+  }
+}
+
+function isGrammarSessionSnapshot(value: unknown): value is GrammarSessionSnapshot {
+  return (
+    isRecord(value) &&
+    value.schemaVersion === 1 &&
+    typeof value.topicId === 'string' &&
+    typeof value.taskIndex === 'number' &&
+    typeof value.answer === 'string' &&
+    typeof value.checked === 'boolean' &&
+    (typeof value.correct === 'boolean' || value.correct === null) &&
+    typeof value.capturedAt === 'string'
+  )
+}
+
+export function summarizeGrammarSession(value: unknown): GrammarSessionSummary | null {
+  if (!isGrammarSessionSnapshot(value)) {
+    return null
+  }
+
+  return {
+    topicId: value.topicId,
+    taskIndex: value.taskIndex,
+    checked: value.checked,
+    updatedAt: value.capturedAt,
+  }
+}
+
 function trainerSummaryEquals(local: TrainerProgressSummary, remote: TrainerProgressSummary | null): boolean {
   if (!remote) {
     return false
@@ -264,6 +351,7 @@ function getSnapshotFingerprint(snapshot: ProgressSnapshot): string {
   return JSON.stringify({
     sections: snapshot.sections,
     trainerSession: snapshot.trainerSession ?? null,
+    grammarSession: snapshot.grammarSession ?? null,
   })
 }
 
@@ -376,6 +464,7 @@ export function collectCloudProgressSnapshot(storage: Storage = window.localStor
   return {
     ...collectLocalProgressSnapshot(storage),
     trainerSession: loadTrainerSessionSnapshot(storage),
+    grammarSession: loadGrammarSessionSnapshot(storage),
   }
 }
 
@@ -625,6 +714,36 @@ function mergeTrainerSession(local: TrainerSessionSnapshot | null, remote: Train
   return remoteTime > localTime ? remote : local
 }
 
+function mergeGrammarSession(
+  local: GrammarSessionSnapshot | null,
+  remote: GrammarSessionSnapshot | null,
+): GrammarSessionSnapshot | null {
+  if (!local) {
+    return remote
+  }
+
+  if (!remote) {
+    return local
+  }
+
+  if (local.topicId !== remote.topicId) {
+    return remote.capturedAt > local.capturedAt ? remote : local
+  }
+
+  if (local.taskIndex !== remote.taskIndex) {
+    return remote.taskIndex > local.taskIndex ? remote : local
+  }
+
+  if (local.checked !== remote.checked) {
+    return remote.checked ? remote : local
+  }
+
+  const localTime = Date.parse(local.capturedAt)
+  const remoteTime = Date.parse(remote.capturedAt)
+
+  return remoteTime > localTime ? remote : local
+}
+
 function mergeSectionValue(section: ProgressSection, local: unknown, remote: unknown): unknown {
   if (isEmptyValue(local)) {
     return remote ?? null
@@ -710,6 +829,7 @@ export function mergeProgressSnapshots(
       Date.parse(remote.capturedAt) > Date.parse(local.capturedAt) ? remote.capturedAt : local.capturedAt,
     sections,
     trainerSession: mergeTrainerSession(local.trainerSession ?? null, remote.trainerSession ?? null),
+    grammarSession: mergeGrammarSession(local.grammarSession ?? null, remote.grammarSession ?? null),
   }
 }
 
@@ -724,6 +844,10 @@ export function applyProgressSnapshot(snapshot: ProgressSnapshot, storage: Stora
     if (snapshot.trainerSession) {
       saveTrainerSessionSnapshot(snapshot.trainerSession, storage)
     }
+
+    if (snapshot.grammarSession) {
+      saveGrammarSessionSnapshot(snapshot.grammarSession, storage)
+    }
   })
 
   dispatchProgressSynced()
@@ -737,12 +861,16 @@ export function normalizeRemoteSnapshot(value: unknown): ProgressSnapshot | null
   const trainerSession = 'trainerSession' in value && value.trainerSession !== null
     ? value.trainerSession
     : null
+  const grammarSession = 'grammarSession' in value && value.grammarSession !== null
+    ? value.grammarSession
+    : null
 
   return {
     schemaVersion: 1,
     capturedAt: typeof value.capturedAt === 'string' ? value.capturedAt : new Date().toISOString(),
     sections: value.sections as Record<ProgressSection, ProgressSectionSnapshot>,
     trainerSession: isTrainerSessionSnapshot(trainerSession) ? trainerSession : null,
+    grammarSession: isGrammarSessionSnapshot(grammarSession) ? grammarSession : null,
   }
 }
 
@@ -796,6 +924,11 @@ async function writeLocalProgressToCloud(uid: string): Promise<void> {
       firestoreStatus: 'available',
       lastCloudWriteAt: new Date().toISOString(),
       lastSyncError: null,
+      localGrammarSession: summarizeGrammarSession(snapshot.grammarSession),
+      cloudGrammarSession: summarizeGrammarSession(snapshot.grammarSession),
+      cloudTrainer: summarizeTrainerProgress(snapshot.sections.trainer.value),
+      localTrainerSession: summarizeTrainerSession(snapshot.trainerSession),
+      cloudTrainerSession: summarizeTrainerSession(snapshot.trainerSession),
     })
     markSnapshotSaved(snapshot)
     setCloudSyncState({
@@ -893,8 +1026,12 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
       lastCloudReadAt: new Date().toISOString(),
       lastSyncError: null,
       cloudTrainer: summarizeTrainerProgress(mergedSnapshot.sections.trainer.value),
+      localGrammar: summarizeGrammarProgress(localSnapshot.sections.grammar.value),
+      cloudGrammar: summarizeGrammarProgress(mergedSnapshot.sections.grammar.value),
       localTrainerSession: summarizeTrainerSession(mergedSnapshot.trainerSession),
       cloudTrainerSession: summarizeTrainerSession(mergedSnapshot.trainerSession),
+      localGrammarSession: summarizeGrammarSession(mergedSnapshot.grammarSession),
+      cloudGrammarSession: summarizeGrammarSession(mergedSnapshot.grammarSession),
     })
 
     await setDoc(
@@ -931,8 +1068,12 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
           lastCloudReadAt: new Date().toISOString(),
           lastSyncError: null,
           cloudTrainer: summarizeTrainerProgress(cloudSnapshot.sections.trainer.value),
+          localGrammar: summarizeGrammarProgress(loadGrammarProgress()),
+          cloudGrammar: summarizeGrammarProgress(cloudSnapshot.sections.grammar.value),
           localTrainerSession: summarizeTrainerSession(loadTrainerSessionSnapshot()),
           cloudTrainerSession: summarizeTrainerSession(cloudSnapshot.trainerSession),
+          localGrammarSession: summarizeGrammarSession(loadGrammarSessionSnapshot()),
+          cloudGrammarSession: summarizeGrammarSession(cloudSnapshot.grammarSession),
         })
         setCloudSyncState({
           status: 'active',
@@ -977,6 +1118,8 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
       cloudTrainer: summarizeTrainerProgress(mergedSnapshot.sections.trainer.value),
       localTrainerSession: summarizeTrainerSession(mergedSnapshot.trainerSession),
       cloudTrainerSession: summarizeTrainerSession(mergedSnapshot.trainerSession),
+      localGrammarSession: summarizeGrammarSession(mergedSnapshot.grammarSession),
+      cloudGrammarSession: summarizeGrammarSession(mergedSnapshot.grammarSession),
     })
     setCloudSyncState({
       status: 'active',
@@ -1054,8 +1197,12 @@ export async function loadCloudProgressToLocal(uid: string): Promise<SyncResult>
       lastCloudReadAt: new Date().toISOString(),
       lastSyncError: null,
       cloudTrainer: summarizeTrainerProgress(remoteSnapshot.sections.trainer.value),
+      localGrammar: summarizeGrammarProgress(loadGrammarProgress()),
+      cloudGrammar: summarizeGrammarProgress(remoteSnapshot.sections.grammar.value),
       localTrainerSession: summarizeTrainerSession(loadTrainerSessionSnapshot()),
       cloudTrainerSession: summarizeTrainerSession(remoteSnapshot.trainerSession),
+      localGrammarSession: summarizeGrammarSession(loadGrammarSessionSnapshot()),
+      cloudGrammarSession: summarizeGrammarSession(remoteSnapshot.grammarSession),
     })
 
     return {
@@ -1115,8 +1262,12 @@ export async function saveLocalProgressToCloud(uid: string): Promise<SyncResult>
       lastCloudWriteAt: new Date().toISOString(),
       lastSyncError: null,
       cloudTrainer: summarizeTrainerProgress(mergedSnapshot.sections.trainer.value),
+      localGrammar: summarizeGrammarProgress(localSnapshot.sections.grammar.value),
+      cloudGrammar: summarizeGrammarProgress(mergedSnapshot.sections.grammar.value),
       localTrainerSession: summarizeTrainerSession(localSnapshot.trainerSession),
       cloudTrainerSession: summarizeTrainerSession(mergedSnapshot.trainerSession),
+      localGrammarSession: summarizeGrammarSession(localSnapshot.grammarSession),
+      cloudGrammarSession: summarizeGrammarSession(mergedSnapshot.grammarSession),
     })
 
     return {
@@ -1173,8 +1324,12 @@ export async function compareCloudProgress(
       lastCloudReadAt: new Date().toISOString(),
       lastSyncError: remoteSnapshot ? null : 'Облачный прогресс не найден',
       cloudTrainer: cloudSummary,
+      localGrammar: summarizeGrammarProgress(localSnapshot.sections.grammar.value),
+      cloudGrammar: summarizeGrammarProgress(remoteSnapshot?.sections.grammar.value ?? null),
       localTrainerSession: summarizeTrainerSession(localSnapshot.trainerSession),
       cloudTrainerSession: summarizeTrainerSession(remoteSnapshot?.trainerSession ?? null),
+      localGrammarSession: summarizeGrammarSession(localSnapshot.grammarSession),
+      cloudGrammarSession: summarizeGrammarSession(remoteSnapshot?.grammarSession ?? null),
     })
 
     return {

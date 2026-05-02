@@ -5,6 +5,7 @@ import {
   collectCloudProgressSnapshot,
   collectLocalProgressSnapshot,
   mergeProgressSnapshots,
+  normalizeRemoteSnapshot,
   PROGRESS_STORAGE_KEYS,
   type ProgressSnapshot,
 } from './progressSync'
@@ -303,6 +304,89 @@ describe('progressSync', () => {
     expect(JSON.parse(window.localStorage.getItem('b1-polish-trainer-session-v0') ?? 'null')).toEqual(
       snapshot.trainerSession,
     )
+  })
+
+  it('collects and applies grammar session snapshots', () => {
+    window.localStorage.clear()
+    window.localStorage.setItem(
+      PROGRESS_STORAGE_KEYS.grammar,
+      JSON.stringify({
+        totalAttempts: 7,
+        correctAnswers: 5,
+        mistakesByTaskId: { one: 2 },
+      }),
+    )
+    window.localStorage.setItem(
+      'b1-grammar-session-v0',
+      JSON.stringify({
+        schemaVersion: 1,
+        capturedAt: '2026-05-02T10:30:00.000Z',
+        topicId: 'cases',
+        taskIndex: 3,
+        answer: 'odpowiedzi',
+        checked: true,
+        correct: false,
+      }),
+    )
+
+    const snapshot = collectCloudProgressSnapshot()
+
+    expect(snapshot.sections.grammar.value).toEqual({
+      totalAttempts: 7,
+      correctAnswers: 5,
+      mistakesByTaskId: { one: 2 },
+    })
+    expect(snapshot.grammarSession).toEqual({
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:30:00.000Z',
+      topicId: 'cases',
+      taskIndex: 3,
+      answer: 'odpowiedzi',
+      checked: true,
+      correct: false,
+    })
+
+    window.localStorage.clear()
+    applyProgressSnapshot(snapshot)
+
+    expect(JSON.parse(window.localStorage.getItem(PROGRESS_STORAGE_KEYS.grammar) ?? 'null')).toEqual(
+      snapshot.sections.grammar.value,
+    )
+    expect(JSON.parse(window.localStorage.getItem('b1-grammar-session-v0') ?? 'null')).toEqual(snapshot.grammarSession)
+  })
+
+  it('normalizes remote grammar session snapshots', () => {
+    const snapshot = normalizeRemoteSnapshot({
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T11:00:00.000Z',
+      sections: {
+        ...Object.fromEntries(
+          Object.entries(PROGRESS_STORAGE_KEYS).map(([section, key]) => [
+            section,
+            { key, value: null, updatedAt: null },
+          ]),
+        ),
+      },
+      grammarSession: {
+        schemaVersion: 1,
+        capturedAt: '2026-05-02T11:30:00.000Z',
+        topicId: 'cases',
+        taskIndex: 4,
+        answer: 'dopiero',
+        checked: false,
+        correct: null,
+      },
+    })
+
+    expect(snapshot?.grammarSession).toEqual({
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T11:30:00.000Z',
+      topicId: 'cases',
+      taskIndex: 4,
+      answer: 'dopiero',
+      checked: false,
+      correct: null,
+    })
   })
 
   it('keeps the more advanced trainer counters when both devices have progress', () => {
