@@ -1,4 +1,6 @@
 import { getFirebaseServices } from './firebase'
+import { firebaseConfigState } from './firebaseConfig'
+import { SERVICE_WORKER_CACHE_VERSION } from './runtimeInfo'
 import {
   dispatchProgressSynced,
   PROGRESS_CHANGED_EVENT,
@@ -44,6 +46,36 @@ export type CloudSyncState = {
 
 export type CloudSyncListener = (state: CloudSyncState) => void
 
+export type TrainerProgressSummary = {
+  attempts: number
+  correctAnswers: number
+  mistakeTotal: number
+  mistakeCards: number
+  dailyCompletedCount: number
+  streak: number
+  updatedAt: string | null
+}
+
+export type SyncDiagnosticsState = {
+  firebaseConfigured: boolean
+  firestoreStatus: 'unknown' | 'available' | 'unavailable'
+  listenerStatus: 'inactive' | 'starting' | 'active'
+  activeUidSuffix: string | null
+  lastCloudReadAt: string | null
+  lastCloudWriteAt: string | null
+  lastSyncError: string | null
+  cloudTrainer: TrainerProgressSummary | null
+  cacheVersion: string
+}
+
+export type SyncComparisonResult = {
+  ok: true
+  status: 'synced'
+  matches: boolean
+  local: TrainerProgressSummary
+  cloud: TrainerProgressSummary | null
+}
+
 const BACKUP_PREFIX = 'b1:backup:before-cloud-sync:'
 const CLOUD_SYNC_DEBOUNCE_MS = 450
 
@@ -53,8 +85,22 @@ const defaultCloudSyncState: CloudSyncState = {
   lastSyncedAt: null,
 }
 
+const defaultSyncDiagnosticsState: SyncDiagnosticsState = {
+  firebaseConfigured: firebaseConfigState.configured,
+  firestoreStatus: 'unknown',
+  listenerStatus: 'inactive',
+  activeUidSuffix: null,
+  lastCloudReadAt: null,
+  lastCloudWriteAt: null,
+  lastSyncError: null,
+  cloudTrainer: null,
+  cacheVersion: SERVICE_WORKER_CACHE_VERSION,
+}
+
 let cloudSyncState: CloudSyncState = defaultCloudSyncState
 const cloudSyncListeners = new Set<CloudSyncListener>()
+let syncDiagnosticsState: SyncDiagnosticsState = defaultSyncDiagnosticsState
+const syncDiagnosticsListeners = new Set<(state: SyncDiagnosticsState) => void>()
 let stopCloudSnapshot: (() => void) | null = null
 let stopLocalChangeListener: (() => void) | null = null
 let pendingCloudWrite: ReturnType<typeof window.setTimeout> | null = null
@@ -98,6 +144,76 @@ function extractUpdatedAt(value: unknown): string | null {
   }
 
   return typeof value.updatedAt === 'string' ? value.updatedAt : null
+}
+
+function countMistakeCards(mistakesByItem: unknown): number {
+  if (!isRecord(mistakesByItem)) {
+    return 0
+  }
+
+  return Object.values(mistakesByItem).filter((count) => typeof count === 'number' && count > 0).length
+}
+
+function sumMistakes(mistakesByItem: unknown): number {
+  if (!isRecord(mistakesByItem)) {
+    return 0
+  }
+
+  return Object.values(mistakesByItem).reduce(
+    (sum: number, count: unknown) => sum + (typeof count === 'number' ? count : 0),
+    0,
+  )
+}
+
+export function summarizeTrainerProgress(value: unknown): TrainerProgressSummary {
+  const record = isRecord(value) ? value : {}
+
+  return {
+    attempts: typeof record.totalAttempts === 'number' ? record.totalAttempts : 0,
+    correctAnswers: typeof record.correctAnswers === 'number' ? record.correctAnswers : 0,
+    mistakeTotal: sumMistakes(record.mistakesByItem),
+    mistakeCards: countMistakeCards(record.mistakesByItem),
+    dailyCompletedCount: typeof record.dailyCompletedCount === 'number' ? record.dailyCompletedCount : 0,
+    streak: typeof record.streak === 'number' ? record.streak : 0,
+    updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : null,
+  }
+}
+
+function trainerSummaryEquals(local: TrainerProgressSummary, remote: TrainerProgressSummary | null): boolean {
+  if (!remote) {
+    return false
+  }
+
+  return (
+    local.attempts === remote.attempts &&
+    local.correctAnswers === remote.correctAnswers &&
+    local.mistakeTotal === remote.mistakeTotal &&
+    local.mistakeCards === remote.mistakeCards &&
+    local.dailyCompletedCount === remote.dailyCompletedCount &&
+    local.streak === remote.streak
+  )
+}
+
+function uidSuffix(uid: string): string {
+  return uid.slice(-6)
+}
+
+function setSyncDiagnostics(next: Partial<SyncDiagnosticsState>): void {
+  syncDiagnosticsState = { ...syncDiagnosticsState, ...next }
+  syncDiagnosticsListeners.forEach((listener) => listener(syncDiagnosticsState))
+}
+
+export function subscribeSyncDiagnostics(listener: (state: SyncDiagnosticsState) => void): () => void {
+  syncDiagnosticsListeners.add(listener)
+  listener(syncDiagnosticsState)
+
+  return () => {
+    syncDiagnosticsListeners.delete(listener)
+  }
+}
+
+export function getSyncDiagnostics(): SyncDiagnosticsState {
+  return syncDiagnosticsState
 }
 
 export function collectLocalProgressSnapshot(storage: Storage = window.localStorage): ProgressSnapshot {
@@ -471,6 +587,10 @@ async function writeLocalProgressToCloud(uid: string): Promise<void> {
   const services = await getFirebaseServices()
 
   if (!services) {
+    setSyncDiagnostics({
+      firestoreStatus: 'unavailable',
+      lastSyncError: 'Firebase недоступен',
+    })
     setCloudSyncState({
       status: 'unavailable',
       message: 'Синхронизация недоступна',
@@ -491,12 +611,21 @@ async function writeLocalProgressToCloud(uid: string): Promise<void> {
       { merge: true },
     )
 
+    setSyncDiagnostics({
+      firestoreStatus: 'available',
+      lastCloudWriteAt: new Date().toISOString(),
+      lastSyncError: null,
+    })
     setCloudSyncState({
       status: 'active',
       message: 'синхронизация включена',
       lastSyncedAt: new Date().toISOString(),
     })
   } catch {
+    setSyncDiagnostics({
+      firestoreStatus: 'available',
+      lastSyncError: 'Не удалось синхронизировать прогресс',
+    })
     setCloudSyncState({
       status: 'failed',
       message: 'Не удалось синхронизировать прогресс',
@@ -526,6 +655,11 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
 
   stopCloudProgressSync()
   activeUid = uid
+  setSyncDiagnostics({
+    activeUidSuffix: uidSuffix(uid),
+    listenerStatus: 'starting',
+    lastSyncError: null,
+  })
   setCloudSyncState({
     status: 'starting',
     message: 'синхронизация...',
@@ -535,6 +669,11 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
   const services = await getFirebaseServices()
 
   if (!services) {
+    setSyncDiagnostics({
+      firestoreStatus: 'unavailable',
+      listenerStatus: 'inactive',
+      lastSyncError: 'Firebase недоступен',
+    })
     setCloudSyncState({
       status: 'unavailable',
       message: 'Синхронизация недоступна',
@@ -552,6 +691,12 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
     const mergedSnapshot = mergeProgressSnapshots(localSnapshot, remoteSnapshot)
 
     applyProgressSnapshot(mergedSnapshot)
+    setSyncDiagnostics({
+      firestoreStatus: 'available',
+      lastCloudReadAt: new Date().toISOString(),
+      lastSyncError: null,
+      cloudTrainer: summarizeTrainerProgress(mergedSnapshot.sections.trainer.value),
+    })
 
     await setDoc(
       progressRef,
@@ -561,6 +706,10 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
       },
       { merge: true },
     )
+    setSyncDiagnostics({
+      lastCloudWriteAt: new Date().toISOString(),
+      cloudTrainer: summarizeTrainerProgress(mergedSnapshot.sections.trainer.value),
+    })
 
     stopCloudSnapshot = onSnapshot(
       progressRef,
@@ -577,6 +726,13 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
 
         const merged = mergeProgressSnapshots(collectLocalProgressSnapshot(), cloudSnapshot)
         applyProgressSnapshot(merged)
+        setSyncDiagnostics({
+          firestoreStatus: 'available',
+          listenerStatus: 'active',
+          lastCloudReadAt: new Date().toISOString(),
+          lastSyncError: null,
+          cloudTrainer: summarizeTrainerProgress(cloudSnapshot.sections.trainer.value),
+        })
         setCloudSyncState({
           status: 'active',
           message: 'синхронизация включена',
@@ -584,6 +740,10 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
         })
       },
       () => {
+        setSyncDiagnostics({
+          listenerStatus: 'active',
+          lastSyncError: 'Не удалось синхронизировать прогресс',
+        })
         setCloudSyncState({
           status: 'failed',
           message: 'Не удалось синхронизировать прогресс',
@@ -595,6 +755,11 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
     window.addEventListener(PROGRESS_CHANGED_EVENT, handleLocalProgressChange)
     stopLocalChangeListener = () => window.removeEventListener(PROGRESS_CHANGED_EVENT, handleLocalProgressChange)
 
+    setSyncDiagnostics({
+      firestoreStatus: 'available',
+      listenerStatus: 'active',
+      cloudTrainer: summarizeTrainerProgress(mergedSnapshot.sections.trainer.value),
+    })
     setCloudSyncState({
       status: 'active',
       message: 'синхронизация включена',
@@ -620,13 +785,84 @@ export function stopCloudProgressSync(): void {
     pendingCloudWrite = null
   }
 
+  setSyncDiagnostics({
+    listenerStatus: 'inactive',
+    activeUidSuffix: null,
+  })
   setCloudSyncState(defaultCloudSyncState)
 }
 
-export async function syncLocalProgressToCloud(uid: string): Promise<SyncResult> {
+export async function loadCloudProgressToLocal(uid: string): Promise<SyncResult> {
   const services = await getFirebaseServices()
 
   if (!services) {
+    setSyncDiagnostics({
+      firestoreStatus: 'unavailable',
+      lastSyncError: 'Firebase не настроен',
+    })
+    return {
+      ok: false,
+      status: 'unavailable',
+      message: 'Firebase не настроен',
+    }
+  }
+
+  try {
+    const { doc, getDoc } = await import('firebase/firestore')
+    const progressRef = doc(services.db, 'users', uid, 'state', 'progress')
+    const remoteDoc = await getDoc(progressRef)
+    const remoteSnapshot = normalizeRemoteSnapshot(remoteDoc.data())
+
+    if (!remoteSnapshot) {
+      setSyncDiagnostics({
+        firestoreStatus: 'available',
+        lastCloudReadAt: new Date().toISOString(),
+        lastSyncError: 'Облачный прогресс не найден',
+      })
+      return {
+        ok: false,
+        status: 'failed',
+        message: 'Облачный прогресс не найден',
+      }
+    }
+
+    const localSnapshot = collectLocalProgressSnapshot()
+    const mergedSnapshot = mergeProgressSnapshots(localSnapshot, remoteSnapshot)
+    applyProgressSnapshot(mergedSnapshot)
+    setSyncDiagnostics({
+      firestoreStatus: 'available',
+      lastCloudReadAt: new Date().toISOString(),
+      lastSyncError: null,
+      cloudTrainer: summarizeTrainerProgress(remoteSnapshot.sections.trainer.value),
+    })
+
+    return {
+      ok: true,
+      status: 'synced',
+      snapshot: mergedSnapshot,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Не удалось загрузить прогресс из облака'
+    setSyncDiagnostics({
+      firestoreStatus: 'available',
+      lastSyncError: message,
+    })
+    return {
+      ok: false,
+      status: 'failed',
+      message,
+    }
+  }
+}
+
+export async function saveLocalProgressToCloud(uid: string): Promise<SyncResult> {
+  const services = await getFirebaseServices()
+
+  if (!services) {
+    setSyncDiagnostics({
+      firestoreStatus: 'unavailable',
+      lastSyncError: 'Firebase не настроен',
+    })
     return {
       ok: false,
       status: 'unavailable',
@@ -650,6 +886,13 @@ export async function syncLocalProgressToCloud(uid: string): Promise<SyncResult>
     })
 
     applyProgressSnapshot(mergedSnapshot)
+    setSyncDiagnostics({
+      firestoreStatus: 'available',
+      lastCloudReadAt: new Date().toISOString(),
+      lastCloudWriteAt: new Date().toISOString(),
+      lastSyncError: null,
+      cloudTrainer: summarizeTrainerProgress(mergedSnapshot.sections.trainer.value),
+    })
 
     return {
       ok: true,
@@ -657,10 +900,72 @@ export async function syncLocalProgressToCloud(uid: string): Promise<SyncResult>
       snapshot: mergedSnapshot,
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Не удалось синхронизировать прогресс'
+    setSyncDiagnostics({
+      firestoreStatus: 'available',
+      lastSyncError: message,
+    })
     return {
       ok: false,
       status: 'failed',
-      message: error instanceof Error ? error.message : 'Не удалось синхронизировать прогресс',
+      message,
+    }
+  }
+}
+
+export async function syncLocalProgressToCloud(uid: string): Promise<SyncResult> {
+  return saveLocalProgressToCloud(uid)
+}
+
+export async function compareCloudProgress(
+  uid: string,
+): Promise<SyncComparisonResult | { ok: false; status: 'unavailable' | 'failed'; message: string }> {
+  const services = await getFirebaseServices()
+
+  if (!services) {
+    setSyncDiagnostics({
+      firestoreStatus: 'unavailable',
+      lastSyncError: 'Firebase не настроен',
+    })
+    return {
+      ok: false,
+      status: 'unavailable',
+      message: 'Firebase не настроен',
+    }
+  }
+
+  try {
+    const { doc, getDoc } = await import('firebase/firestore')
+    const progressRef = doc(services.db, 'users', uid, 'state', 'progress')
+    const remoteDoc = await getDoc(progressRef)
+    const remoteSnapshot = normalizeRemoteSnapshot(remoteDoc.data())
+    const localSummary = summarizeTrainerProgress(collectLocalProgressSnapshot().sections.trainer.value)
+    const cloudSummary = remoteSnapshot ? summarizeTrainerProgress(remoteSnapshot.sections.trainer.value) : null
+
+    setSyncDiagnostics({
+      firestoreStatus: 'available',
+      lastCloudReadAt: new Date().toISOString(),
+      lastSyncError: remoteSnapshot ? null : 'Облачный прогресс не найден',
+      cloudTrainer: cloudSummary,
+    })
+
+    return {
+      ok: true,
+      status: 'synced',
+      matches: trainerSummaryEquals(localSummary, cloudSummary),
+      local: localSummary,
+      cloud: cloudSummary,
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Не удалось проверить синхронизацию'
+    setSyncDiagnostics({
+      firestoreStatus: 'available',
+      lastSyncError: message,
+    })
+    return {
+      ok: false,
+      status: 'failed',
+      message,
     }
   }
 }

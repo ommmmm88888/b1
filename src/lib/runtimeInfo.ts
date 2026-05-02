@@ -1,0 +1,1 @@
+export const SERVICE_WORKER_CACHE_VERSION = 'v1-2026-05-02'

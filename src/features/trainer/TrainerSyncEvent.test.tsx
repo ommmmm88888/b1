@@ -40,4 +40,35 @@ describe('TrainerScreen progress sync event', () => {
     expect(promptAfter).toBe(promptBefore)
     expect(mistakesAfter).not.toBe(mistakesBefore)
   })
+
+  it('refreshes trainer progress on window focus without recreating the question', async () => {
+    render(<TrainerScreen />)
+
+    const promptBefore = document.querySelector('.card-stage__prompt')?.textContent ?? ''
+    const summaryBefore = screen.getByText('Ошибок:').parentElement?.textContent ?? ''
+
+    window.localStorage.setItem(
+      'b1-polish-trainer-progress-v0',
+      JSON.stringify({
+        totalAttempts: 9,
+        correctAnswers: 6,
+        mistakesByItem: { one: 2, two: 1 },
+        lastSessionDate: '2026-05-02',
+        dailyCompletedCount: 1,
+        streak: 3,
+      }),
+    )
+
+    window.dispatchEvent(new Event('focus'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Ошибок:').parentElement?.textContent).toContain('3')
+    })
+
+    const promptAfter = document.querySelector('.card-stage__prompt')?.textContent ?? ''
+    const summaryAfter = screen.getByText('Ошибок:').parentElement?.textContent ?? ''
+
+    expect(promptAfter).toBe(promptBefore)
+    expect(summaryAfter).not.toBe(summaryBefore)
+  })
 })

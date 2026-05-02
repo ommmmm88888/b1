@@ -11,7 +11,8 @@ export async function registerServiceWorker(): Promise<void> {
     })
 
   if (document.readyState === 'complete') {
-    await register()
+    const registration = await register()
+    void registration.update()
     return
   }
 
@@ -19,7 +20,11 @@ export async function registerServiceWorker(): Promise<void> {
     window.addEventListener(
       'load',
       () => {
-        register().then(() => resolve(), reject)
+        register()
+          .then((registration) => {
+            void registration.update()
+            resolve()
+          }, reject)
       },
       { once: true },
     )

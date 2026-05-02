@@ -8,14 +8,34 @@ import {
   subscribeAuthState,
   type AuthUser,
 } from '../../lib/auth'
+import { PROGRESS_CHANGED_EVENT, PROGRESS_SYNCED_EVENT } from '../../lib/progressEvents'
+import { loadProgress } from '../../lib/progressStorage'
 import {
+  compareCloudProgress,
+  getSyncDiagnostics,
+  loadCloudProgressToLocal,
+  saveLocalProgressToCloud,
   startCloudProgressSync,
   stopCloudProgressSync,
   subscribeCloudSyncState,
+  subscribeSyncDiagnostics,
+  summarizeTrainerProgress,
   type CloudSyncState,
+  type SyncDiagnosticsState,
 } from '../../lib/progressSync'
 
 type AccountStatus = 'idle' | 'signing-in' | 'failed' | 'unavailable'
+
+function formatSyncTime(value: string | null): string {
+  if (!value) {
+    return 'нет'
+  }
+
+  return new Intl.DateTimeFormat('ru-RU', {
+    dateStyle: 'short',
+    timeStyle: 'medium',
+  }).format(new Date(value))
+}
 
 export function AccountSyncControl() {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -27,9 +47,25 @@ export function AccountSyncControl() {
   })
   const [message, setMessage] = useState('')
   const [showSetupInfo, setShowSetupInfo] = useState(false)
+  const [diagnostics, setDiagnostics] = useState<SyncDiagnosticsState>(getSyncDiagnostics())
+  const [localTrainer, setLocalTrainer] = useState(() => summarizeTrainerProgress(loadProgress()))
+  const [manualMessage, setManualMessage] = useState('')
 
   useEffect(() => subscribeAuthState(setUser), [])
   useEffect(() => subscribeCloudSyncState(setSyncState), [])
+  useEffect(() => subscribeSyncDiagnostics(setDiagnostics), [])
+  useEffect(() => {
+    const refreshLocalTrainer = () => setLocalTrainer(summarizeTrainerProgress(loadProgress()))
+
+    refreshLocalTrainer()
+
+    window.addEventListener(PROGRESS_CHANGED_EVENT, refreshLocalTrainer)
+    window.addEventListener(PROGRESS_SYNCED_EVENT, refreshLocalTrainer)
+    return () => {
+      window.removeEventListener(PROGRESS_CHANGED_EVENT, refreshLocalTrainer)
+      window.removeEventListener(PROGRESS_SYNCED_EVENT, refreshLocalTrainer)
+    }
+  }, [])
   useEffect(() => {
     if (!user) {
       stopCloudProgressSync()
@@ -46,22 +82,25 @@ export function AccountSyncControl() {
   if (!isFirebaseConfigured) {
     return (
       <div className="account-sync account-sync--disabled" aria-label="Синхронизация">
-        <button
-          className="account-sync__button account-sync__button--setup"
-          type="button"
-          onClick={() => setShowSetupInfo((current) => !current)}
-          aria-expanded={showSetupInfo}
-          aria-controls="firebase-sync-setup-note"
-        >
-          Google вход
-        </button>
-        <span className="account-sync__status">не настроено</span>
+        <div className="account-sync__row">
+          <button
+            className="account-sync__button account-sync__button--setup"
+            type="button"
+            onClick={() => setShowSetupInfo((current) => !current)}
+            aria-expanded={showSetupInfo}
+            aria-controls="firebase-sync-setup-note"
+          >
+            Google вход
+          </button>
+          <span className="account-sync__status">не настроено</span>
+        </div>
         {showSetupInfo ? (
           <span className="account-sync__setup-note" id="firebase-sync-setup-note">
             Синхронизация между устройствами появится после настройки Firebase.
             {firebaseConfigState.configured ? '' : ` Не хватает: ${firebaseConfigState.missing.join(', ')}.`}
           </span>
         ) : null}
+        {renderDiagnosticsPanel()}
       </div>
     )
   }
@@ -69,6 +108,7 @@ export function AccountSyncControl() {
   async function handleSignIn() {
     setStatus('signing-in')
     setMessage('')
+    setManualMessage('')
 
     try {
       await signInWithGoogle()
@@ -84,15 +124,156 @@ export function AccountSyncControl() {
     stopCloudProgressSync()
     setStatus('idle')
     setMessage('')
+    setManualMessage('')
+  }
+
+  async function handleLoadFromCloud() {
+    if (!user) {
+      return
+    }
+
+    setManualMessage('Загрузка из облака...')
+    const result = await loadCloudProgressToLocal(user.uid)
+    if (result.ok) {
+      setManualMessage('Прогресс загружен из облака.')
+    } else {
+      setManualMessage(result.message)
+    }
+  }
+
+  async function handleSaveToCloud() {
+    if (!user) {
+      return
+    }
+
+    setManualMessage('Сохранение в облако...')
+    const result = await saveLocalProgressToCloud(user.uid)
+    if (result.ok) {
+      setManualMessage('Прогресс сохранен в облаке.')
+    } else {
+      setManualMessage(result.message)
+    }
+  }
+
+  async function handleCheckSync() {
+    if (!user) {
+      return
+    }
+
+    setManualMessage('Проверка синхронизации...')
+    const result = await compareCloudProgress(user.uid)
+
+    if (!result.ok) {
+      setManualMessage(result.message)
+      return
+    }
+
+    setDiagnostics((current) => ({
+      ...current,
+      cloudTrainer: result.cloud,
+      lastSyncError: null,
+    }))
+    setManualMessage(result.matches ? 'Локальный и облачный прогресс совпадают.' : 'Локальный и облачный прогресс отличаются.')
+  }
+
+  function renderDiagnosticsPanel() {
+    const canRunManualActions = Boolean(user && isFirebaseConfigured)
+    const cloudTrainer = diagnostics.cloudTrainer
+
+    return (
+      <details className="account-sync__diagnostics">
+        <summary>Диагностика синхронизации</summary>
+        <div className="account-sync__diagnostics-grid">
+          <div className="account-sync__diagnostic">
+            <span>Auth</span>
+            <strong>{user ? `signed in · ${user.uid.slice(-6)}` : 'signed out'}</strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Firebase</span>
+            <strong>{diagnostics.firebaseConfigured ? 'configured' : 'missing'}</strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Firestore</span>
+            <strong>{diagnostics.firestoreStatus}</strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Listener</span>
+            <strong>{diagnostics.listenerStatus}</strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Last read</span>
+            <strong>{formatSyncTime(diagnostics.lastCloudReadAt)}</strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Last write</span>
+            <strong>{formatSyncTime(diagnostics.lastCloudWriteAt)}</strong>
+          </div>
+          <div className="account-sync__diagnostic account-sync__diagnostic--wide">
+            <span>Error</span>
+            <strong>{diagnostics.lastSyncError ?? 'нет'}</strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Local trainer</span>
+            <strong>{`a:${localTrainer.attempts} c:${localTrainer.correctAnswers} m:${localTrainer.mistakeTotal} d:${localTrainer.dailyCompletedCount} s:${localTrainer.streak} @${formatSyncTime(localTrainer.updatedAt)}`}</strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Cloud trainer</span>
+            <strong>
+              {cloudTrainer
+                ? `a:${cloudTrainer.attempts} c:${cloudTrainer.correctAnswers} m:${cloudTrainer.mistakeTotal} d:${cloudTrainer.dailyCompletedCount} s:${cloudTrainer.streak} @${formatSyncTime(cloudTrainer.updatedAt)}`
+                : 'нет'}
+            </strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Cache</span>
+            <strong>{diagnostics.cacheVersion}</strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>UID</span>
+            <strong>{diagnostics.activeUidSuffix ? `••••••${diagnostics.activeUidSuffix}` : 'нет'}</strong>
+          </div>
+        </div>
+        <div className="account-sync__diagnostics-actions">
+          <button
+            className="account-sync__button account-sync__button--primary"
+            type="button"
+            onClick={handleSaveToCloud}
+            disabled={!canRunManualActions}
+          >
+            Сохранить в облако
+          </button>
+          <button
+            className="account-sync__button"
+            type="button"
+            onClick={handleLoadFromCloud}
+            disabled={!canRunManualActions}
+          >
+            Загрузить из облака
+          </button>
+          <button
+            className="account-sync__button"
+            type="button"
+            onClick={handleCheckSync}
+            disabled={!canRunManualActions}
+          >
+            Проверить синхронизацию
+          </button>
+        </div>
+        {manualMessage ? <div className="account-sync__diagnostics-note">{manualMessage}</div> : null}
+      </details>
+    )
   }
 
   if (!user) {
     return (
       <div className="account-sync" aria-label="Синхронизация">
-        <button className="account-sync__button" type="button" onClick={handleSignIn} disabled={status === 'signing-in'}>
-          {status === 'signing-in' ? 'Вход...' : 'Google вход'}
-        </button>
-        {message ? <span className="account-sync__status">{message}</span> : null}
+        <div className="account-sync__row">
+          <button className="account-sync__button" type="button" onClick={handleSignIn} disabled={status === 'signing-in'}>
+            {status === 'signing-in' ? 'Вход...' : 'Google вход'}
+          </button>
+          {message ? <span className="account-sync__status">{message}</span> : null}
+        </div>
+        {renderDiagnosticsPanel()}
       </div>
     )
   }
@@ -109,16 +290,19 @@ export function AccountSyncControl() {
 
   return (
     <div className="account-sync" aria-label="Синхронизация">
-      <span className="account-sync__user" title={displayName}>
-        {displayName}
-      </span>
-      <span className="account-sync__status" title={syncState.lastSyncedAt ?? undefined}>
-        {syncLabel}
-      </span>
-      <button className="account-sync__button" type="button" onClick={handleSignOut}>
-        Выйти
-      </button>
-      {message ? <span className="account-sync__status">{message}</span> : null}
+      <div className="account-sync__row">
+        <span className="account-sync__user" title={displayName}>
+          {displayName}
+        </span>
+        <span className="account-sync__status" title={syncState.lastSyncedAt ?? undefined}>
+          {syncLabel}
+        </span>
+        <button className="account-sync__button" type="button" onClick={handleSignOut}>
+          Выйти
+        </button>
+        {message ? <span className="account-sync__status">{message}</span> : null}
+      </div>
+      {renderDiagnosticsPanel()}
     </div>
   )
 }

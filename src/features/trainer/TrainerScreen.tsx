@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { b1Vocabulary } from '../../data/b1Vocabulary'
 import { isAnswerCorrect } from '../../lib/answerCheck'
 import { applyAnswerEditForRetry } from '../../lib/answerRetryState'
@@ -10,6 +10,7 @@ import {
   saveProgress,
 } from '../../lib/progressStorage'
 import { PROGRESS_SYNCED_EVENT } from '../../lib/progressEvents'
+import { subscribeCloudSyncState } from '../../lib/progressSync'
 import type { ProgressState, VocabularyItem } from '../../types/training'
 
 type SessionMode = 'daily' | 'mistakes'
@@ -77,14 +78,19 @@ export function TrainerScreen() {
 
   const currentItem = session.items[session.currentIndex]
 
+  const refreshProgressFromStorage = useCallback(() => {
+    skipSyncSaveRef.current = true
+    setProgress(loadProgress())
+  }, [])
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       skipHydrationSaveRef.current = 2
-      setProgress(loadProgress())
+      refreshProgressFromStorage()
     }, 0)
 
     return () => window.clearTimeout(timeoutId)
-  }, [])
+  }, [refreshProgressFromStorage])
 
   useEffect(() => {
     if (skipHydrationSaveRef.current > 0) {
@@ -102,14 +108,40 @@ export function TrainerScreen() {
 
   useEffect(() => {
     const handleProgressSynced = () => {
-      skipSyncSaveRef.current = true
-      setProgress(loadProgress())
+      refreshProgressFromStorage()
     }
 
     window.addEventListener(PROGRESS_SYNCED_EVENT, handleProgressSynced)
 
     return () => window.removeEventListener(PROGRESS_SYNCED_EVENT, handleProgressSynced)
-  }, [])
+  }, [refreshProgressFromStorage])
+
+  useEffect(() => {
+    const unsubscribe = subscribeCloudSyncState((state) => {
+      if (state.status === 'active') {
+        refreshProgressFromStorage()
+      }
+    })
+
+    return unsubscribe
+  }, [refreshProgressFromStorage])
+
+  useEffect(() => {
+    const handleFocus = () => refreshProgressFromStorage()
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshProgressFromStorage()
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [refreshProgressFromStorage])
 
   const sessionStats = useMemo(() => {
     const attempts = progress.totalAttempts
