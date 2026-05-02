@@ -11,6 +11,12 @@ import {
 } from '../../lib/progressStorage'
 import { PROGRESS_SYNCED_EVENT } from '../../lib/progressEvents'
 import { requestActiveCloudProgressSave, subscribeCloudSyncState } from '../../lib/progressSync'
+import {
+  createTrainerSessionSnapshot,
+  loadTrainerSessionSnapshot,
+  saveTrainerSessionSnapshot,
+  type TrainerSessionSnapshot,
+} from '../../lib/trainerSessionStorage'
 import type { ProgressState, VocabularyItem } from '../../types/training'
 
 type SessionMode = 'daily' | 'mistakes'
@@ -70,9 +76,48 @@ function createSession(mode: SessionMode, progress: ProgressState): SessionState
   }
 }
 
+function createSessionFromSnapshot(snapshot: TrainerSessionSnapshot | null, progress: ProgressState): SessionState {
+  if (!snapshot) {
+    return createSession('daily', progress)
+  }
+
+  const itemById = new Map(b1Vocabulary.map((item) => [item.id, item] as const))
+  const items = snapshot.itemIds.map((itemId) => itemById.get(itemId)).filter(Boolean) as VocabularyItem[]
+
+  if (items.length === 0) {
+    return createSession(snapshot.mode, progress)
+  }
+
+  return {
+    mode: snapshot.mode,
+    items,
+    currentIndex: Math.min(snapshot.currentIndex, Math.max(items.length - 1, 0)),
+    answer: snapshot.answer,
+    checked: snapshot.checked,
+    correct: snapshot.correct,
+    revealedHint: snapshot.revealedHint,
+    finished: snapshot.finished,
+  }
+}
+
+function createSessionSnapshot(session: SessionState): TrainerSessionSnapshot {
+  return createTrainerSessionSnapshot({
+    mode: session.mode,
+    itemIds: session.items.map((item) => item.id),
+    currentIndex: session.currentIndex,
+    answer: session.answer,
+    checked: session.checked,
+    correct: session.correct,
+    revealedHint: session.revealedHint,
+    finished: session.finished,
+  })
+}
+
 export function TrainerScreen() {
   const [progress, setProgress] = useState<ProgressState>(() => loadProgress())
-  const [session, setSession] = useState<SessionState>(() => createSession('daily', loadProgress()))
+  const [session, setSession] = useState<SessionState>(() =>
+    createSessionFromSnapshot(loadTrainerSessionSnapshot(), loadProgress()),
+  )
   const skipHydrationSaveRef = useRef(0)
   const skipSyncSaveRef = useRef(false)
 
@@ -84,11 +129,14 @@ export function TrainerScreen() {
   }, [])
 
   const commitProgress = useCallback(
-    (nextProgress: ProgressState) => {
-      skipSyncSaveRef.current = true
-      saveProgress(nextProgress)
-      requestActiveCloudProgressSave()
-      setProgress(nextProgress)
+    (updater: (current: ProgressState) => ProgressState) => {
+      setProgress((current) => {
+        const nextProgress = updater(current)
+        skipSyncSaveRef.current = true
+        saveProgress(nextProgress)
+        requestActiveCloudProgressSave()
+        return nextProgress
+      })
     },
     [],
   )
@@ -101,6 +149,10 @@ export function TrainerScreen() {
 
     return () => window.clearTimeout(timeoutId)
   }, [refreshProgressFromStorage])
+
+  useEffect(() => {
+    saveTrainerSessionSnapshot(createSessionSnapshot(session))
+  }, [session])
 
   useEffect(() => {
     if (skipHydrationSaveRef.current > 0) {
@@ -186,8 +238,7 @@ export function TrainerScreen() {
 
     const correct = isAnswerCorrect(session.answer, currentItem.acceptedAnswers)
 
-    const nextProgress = recordAttempt(progress, currentItem.id, correct)
-    commitProgress(nextProgress)
+    commitProgress((current) => recordAttempt(current, currentItem.id, correct))
     setSession((current) => ({
       ...current,
       checked: true,
@@ -206,7 +257,7 @@ export function TrainerScreen() {
     if (isLastItem) {
       if (session.mode === 'daily') {
         const today = getTodayKey()
-        commitProgress(markDailySessionCompleted(progress, today))
+        commitProgress((current) => markDailySessionCompleted(current, today))
       }
 
       setSession((current) => ({

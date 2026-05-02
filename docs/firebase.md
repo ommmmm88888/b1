@@ -94,6 +94,15 @@ On sign-in, the app:
 
 When signed out, the app continues to use localStorage only.
 
+## Trainer Local Persistence
+
+Trainer progress now has two local layers:
+
+- aggregate progress snapshot in `b1-polish-trainer-progress-v0`
+- current trainer session snapshot in `b1-polish-trainer-session-v0`
+
+The session snapshot preserves the current question order, current index, checked state, and answer state across reloads. This is local-only behavior; Firestore sync still uses the aggregate progress snapshot.
+
 ## Sync Diagnostics
 
 The account area includes a compact `Диагностика синхронизации` panel for manual verification. It shows redacted auth state, listener state, last cloud read/write times, local and cloud trainer summaries, and the current cache version.
