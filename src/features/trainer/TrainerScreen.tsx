@@ -10,7 +10,7 @@ import {
   saveProgress,
 } from '../../lib/progressStorage'
 import { PROGRESS_SYNCED_EVENT } from '../../lib/progressEvents'
-import { subscribeCloudSyncState } from '../../lib/progressSync'
+import { requestActiveCloudProgressSave, subscribeCloudSyncState } from '../../lib/progressSync'
 import type { ProgressState, VocabularyItem } from '../../types/training'
 
 type SessionMode = 'daily' | 'mistakes'
@@ -104,6 +104,7 @@ export function TrainerScreen() {
     }
 
     saveProgress(progress)
+    requestActiveCloudProgressSave()
   }, [progress])
 
   useEffect(() => {

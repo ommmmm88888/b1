@@ -697,6 +697,19 @@ function scheduleCloudWrite(uid: string): void {
   }, CLOUD_SYNC_DEBOUNCE_MS)
 }
 
+export function requestActiveCloudProgressSave(): void {
+  if (!activeUid) {
+    return
+  }
+
+  if (pendingCloudWrite && typeof window !== 'undefined') {
+    window.clearTimeout(pendingCloudWrite)
+    pendingCloudWrite = null
+  }
+
+  void writeLocalProgressToCloud(activeUid)
+}
+
 export async function startCloudProgressSync(uid: string): Promise<void> {
   if (activeUid === uid && cloudSyncState.status === 'active') {
     return
