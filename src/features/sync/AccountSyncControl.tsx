@@ -201,6 +201,10 @@ export function AccountSyncControl() {
             <strong>{diagnostics.listenerStatus}</strong>
           </div>
           <div className="account-sync__diagnostic">
+            <span>Autosave</span>
+            <strong>{syncState.status === 'active' ? 'active' : 'inactive'}</strong>
+          </div>
+          <div className="account-sync__diagnostic">
             <span>Last read</span>
             <strong>{formatSyncTime(diagnostics.lastCloudReadAt)}</strong>
           </div>

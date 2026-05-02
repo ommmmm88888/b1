@@ -78,6 +78,7 @@ export type SyncComparisonResult = {
 
 const BACKUP_PREFIX = 'b1:backup:before-cloud-sync:'
 const CLOUD_SYNC_DEBOUNCE_MS = 450
+const CLOUD_AUTOSAVE_INTERVAL_MS = 5000
 
 const defaultCloudSyncState: CloudSyncState = {
   status: 'idle',
@@ -103,8 +104,11 @@ let syncDiagnosticsState: SyncDiagnosticsState = defaultSyncDiagnosticsState
 const syncDiagnosticsListeners = new Set<(state: SyncDiagnosticsState) => void>()
 let stopCloudSnapshot: (() => void) | null = null
 let stopLocalChangeListener: (() => void) | null = null
+let stopAutosaveListener: (() => void) | null = null
+let autosaveInterval: ReturnType<typeof window.setInterval> | null = null
 let pendingCloudWrite: ReturnType<typeof window.setTimeout> | null = null
 let activeUid: string | null = null
+let lastSavedFingerprint: string | null = null
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -201,6 +205,50 @@ function uidSuffix(uid: string): string {
 function setSyncDiagnostics(next: Partial<SyncDiagnosticsState>): void {
   syncDiagnosticsState = { ...syncDiagnosticsState, ...next }
   syncDiagnosticsListeners.forEach((listener) => listener(syncDiagnosticsState))
+}
+
+function getSnapshotFingerprint(snapshot: ProgressSnapshot): string {
+  return JSON.stringify(snapshot.sections)
+}
+
+function markSnapshotSaved(snapshot: ProgressSnapshot): void {
+  lastSavedFingerprint = getSnapshotFingerprint(snapshot)
+}
+
+function hasPendingAutosave(): boolean {
+  return getSnapshotFingerprint(collectLocalProgressSnapshot()) !== lastSavedFingerprint
+}
+
+function startAutosaveHeartbeat(uid: string): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (autosaveInterval) {
+    window.clearInterval(autosaveInterval)
+  }
+
+  autosaveInterval = window.setInterval(() => {
+    if (activeUid !== uid || !hasPendingAutosave()) {
+      return
+    }
+
+    scheduleCloudWrite(uid)
+  }, CLOUD_AUTOSAVE_INTERVAL_MS)
+}
+
+function stopAutosaveHeartbeat(): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (autosaveInterval) {
+    window.clearInterval(autosaveInterval)
+    autosaveInterval = null
+  }
+
+  stopAutosaveListener?.()
+  stopAutosaveListener = null
 }
 
 export function subscribeSyncDiagnostics(listener: (state: SyncDiagnosticsState) => void): () => void {
@@ -616,6 +664,7 @@ async function writeLocalProgressToCloud(uid: string): Promise<void> {
       lastCloudWriteAt: new Date().toISOString(),
       lastSyncError: null,
     })
+    markSnapshotSaved(snapshot)
     setCloudSyncState({
       status: 'active',
       message: 'синхронизация включена',
@@ -655,6 +704,7 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
 
   stopCloudProgressSync()
   activeUid = uid
+  lastSavedFingerprint = null
   setSyncDiagnostics({
     activeUidSuffix: uidSuffix(uid),
     listenerStatus: 'starting',
@@ -691,6 +741,7 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
     const mergedSnapshot = mergeProgressSnapshots(localSnapshot, remoteSnapshot)
 
     applyProgressSnapshot(mergedSnapshot)
+    markSnapshotSaved(mergedSnapshot)
     setSyncDiagnostics({
       firestoreStatus: 'available',
       lastCloudReadAt: new Date().toISOString(),
@@ -726,6 +777,7 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
 
         const merged = mergeProgressSnapshots(collectLocalProgressSnapshot(), cloudSnapshot)
         applyProgressSnapshot(merged)
+        markSnapshotSaved(merged)
         setSyncDiagnostics({
           firestoreStatus: 'available',
           listenerStatus: 'active',
@@ -755,6 +807,20 @@ export async function startCloudProgressSync(uid: string): Promise<void> {
     window.addEventListener(PROGRESS_CHANGED_EVENT, handleLocalProgressChange)
     stopLocalChangeListener = () => window.removeEventListener(PROGRESS_CHANGED_EVENT, handleLocalProgressChange)
 
+    const handleAutosaveFlush = () => {
+      if (activeUid === uid && hasPendingAutosave()) {
+        void writeLocalProgressToCloud(uid)
+      }
+    }
+
+    window.addEventListener('pagehide', handleAutosaveFlush)
+    document.addEventListener('visibilitychange', handleAutosaveFlush)
+    stopAutosaveListener = () => {
+      window.removeEventListener('pagehide', handleAutosaveFlush)
+      document.removeEventListener('visibilitychange', handleAutosaveFlush)
+    }
+    startAutosaveHeartbeat(uid)
+
     setSyncDiagnostics({
       firestoreStatus: 'available',
       listenerStatus: 'active',
@@ -778,7 +844,9 @@ export function stopCloudProgressSync(): void {
   stopCloudSnapshot = null
   stopLocalChangeListener?.()
   stopLocalChangeListener = null
+  stopAutosaveHeartbeat()
   activeUid = null
+  lastSavedFingerprint = null
 
   if (pendingCloudWrite && typeof window !== 'undefined') {
     window.clearTimeout(pendingCloudWrite)
@@ -829,6 +897,7 @@ export async function loadCloudProgressToLocal(uid: string): Promise<SyncResult>
     const localSnapshot = collectLocalProgressSnapshot()
     const mergedSnapshot = mergeProgressSnapshots(localSnapshot, remoteSnapshot)
     applyProgressSnapshot(mergedSnapshot)
+    markSnapshotSaved(mergedSnapshot)
     setSyncDiagnostics({
       firestoreStatus: 'available',
       lastCloudReadAt: new Date().toISOString(),
@@ -886,6 +955,7 @@ export async function saveLocalProgressToCloud(uid: string): Promise<SyncResult>
     })
 
     applyProgressSnapshot(mergedSnapshot)
+    markSnapshotSaved(mergedSnapshot)
     setSyncDiagnostics({
       firestoreStatus: 'available',
       lastCloudReadAt: new Date().toISOString(),

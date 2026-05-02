@@ -89,7 +89,8 @@ On sign-in, the app:
 - reads Firestore progress;
 - merges both without erasing non-empty progress;
 - saves the merged result to Firestore and localStorage;
-- starts a live Firestore listener.
+- starts a live Firestore listener;
+- keeps autosave active while signed in, with debounced writes plus a periodic flush and a page-hide flush.
 
 When signed out, the app continues to use localStorage only.
 
