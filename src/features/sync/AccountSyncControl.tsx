@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
 
 import {
+  firebaseConfigState,
   isFirebaseConfigured,
   signInWithGoogle,
   signOut,
   subscribeAuthState,
   type AuthUser,
 } from '../../lib/auth'
-import { syncLocalProgressToCloud } from '../../lib/progressSync'
 
-type SyncStatus = 'idle' | 'syncing' | 'synced' | 'failed' | 'unavailable'
+type AccountStatus = 'idle' | 'signing-in' | 'failed' | 'unavailable'
 
 export function AccountSyncControl() {
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [status, setStatus] = useState<SyncStatus>(isFirebaseConfigured ? 'idle' : 'unavailable')
+  const [status, setStatus] = useState<AccountStatus>(isFirebaseConfigured ? 'idle' : 'unavailable')
   const [message, setMessage] = useState('')
   const [showSetupInfo, setShowSetupInfo] = useState(false)
 
@@ -35,6 +35,7 @@ export function AccountSyncControl() {
         {showSetupInfo ? (
           <span className="account-sync__setup-note" id="firebase-sync-setup-note">
             Синхронизация между устройствами появится после настройки Firebase.
+            {firebaseConfigState.configured ? '' : ` Не хватает: ${firebaseConfigState.missing.join(', ')}.`}
           </span>
         ) : null}
       </div>
@@ -42,29 +43,16 @@ export function AccountSyncControl() {
   }
 
   async function handleSignIn() {
-    setStatus('idle')
+    setStatus('signing-in')
     setMessage('')
 
     try {
       await signInWithGoogle()
+      setStatus('idle')
     } catch (error) {
       setStatus('failed')
       setMessage(error instanceof Error ? error.message : 'Не удалось войти')
     }
-  }
-
-  async function handleSync() {
-    if (!user) {
-      return
-    }
-
-    setStatus('syncing')
-    setMessage('')
-
-    const result = await syncLocalProgressToCloud(user.uid)
-
-    setStatus(result.status)
-    setMessage(result.ok ? 'Синхронизировано' : result.message)
   }
 
   async function handleSignOut() {
@@ -76,8 +64,8 @@ export function AccountSyncControl() {
   if (!user) {
     return (
       <div className="account-sync" aria-label="Синхронизация">
-        <button className="account-sync__button" type="button" onClick={handleSignIn}>
-          Войти через Google
+        <button className="account-sync__button" type="button" onClick={handleSignIn} disabled={status === 'signing-in'}>
+          {status === 'signing-in' ? 'Вход...' : 'Google вход'}
         </button>
         {message ? <span className="account-sync__status">{message}</span> : null}
       </div>
@@ -91,14 +79,7 @@ export function AccountSyncControl() {
       <span className="account-sync__user" title={displayName}>
         {displayName}
       </span>
-      <button
-        className="account-sync__button account-sync__button--primary"
-        type="button"
-        onClick={handleSync}
-        disabled={status === 'syncing'}
-      >
-        {status === 'syncing' ? 'Синхронизация...' : 'Синхронизировать'}
-      </button>
+      <span className="account-sync__status">вход выполнен</span>
       <button className="account-sync__button" type="button" onClick={handleSignOut}>
         Выйти
       </button>

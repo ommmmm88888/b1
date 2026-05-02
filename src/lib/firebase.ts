@@ -1,26 +1,11 @@
-import type { FirebaseApp, FirebaseOptions } from 'firebase/app'
 import type { Firestore } from 'firebase/firestore'
 
+import { getFirebaseApp } from './firebaseApp'
+import { isFirebaseConfigured } from './firebaseConfig'
+
 type FirebaseServices = {
-  app: FirebaseApp
   db: Firestore
 }
-
-const firebaseConfig: FirebaseOptions = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || undefined,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || undefined,
-}
-
-export const isFirebaseConfigured = Boolean(
-  firebaseConfig.apiKey &&
-    firebaseConfig.authDomain &&
-    firebaseConfig.projectId &&
-    firebaseConfig.appId,
-)
 
 let services: FirebaseServices | null = null
 
@@ -33,15 +18,14 @@ export async function getFirebaseServices(): Promise<FirebaseServices | null> {
     return services
   }
 
-  const [{ getApps, initializeApp }, firestore] = await Promise.all([
-    import('firebase/app'),
-    import('firebase/firestore'),
-  ])
-  const app = getApps()[0] ?? initializeApp(firebaseConfig)
+  const [app, firestore] = await Promise.all([getFirebaseApp(), import('firebase/firestore')])
+
+  if (!app) {
+    return null
+  }
 
   try {
     services = {
-      app,
       db: firestore.initializeFirestore(app, {
         localCache: firestore.persistentLocalCache({
           tabManager: firestore.persistentMultipleTabManager(),
@@ -50,10 +34,11 @@ export async function getFirebaseServices(): Promise<FirebaseServices | null> {
     }
   } catch {
     services = {
-      app,
       db: firestore.initializeFirestore(app, { localCache: firestore.memoryLocalCache() }),
     }
   }
 
   return services
 }
+
+export { isFirebaseConfigured }

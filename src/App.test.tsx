@@ -1,17 +1,22 @@
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
-
-import App from './App'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 describe('App navigation', () => {
   beforeEach(() => {
     cleanup()
+    vi.resetModules()
+    vi.unstubAllEnvs()
     window.localStorage.clear()
   })
 
   it('renders accessible navigation with an obvious active section', async () => {
     const user = userEvent.setup()
+    vi.stubEnv('VITE_FIREBASE_API_KEY', '')
+    vi.stubEnv('VITE_FIREBASE_AUTH_DOMAIN', '')
+    vi.stubEnv('VITE_FIREBASE_PROJECT_ID', '')
+    vi.stubEnv('VITE_FIREBASE_APP_ID', '')
+    const { default: App } = await import('./App')
 
     render(<App />)
 
@@ -25,7 +30,7 @@ describe('App navigation', () => {
     await user.click(within(header).getByRole('button', { name: 'Google вход' }))
 
     expect(
-      within(header).getByText('Синхронизация между устройствами появится после настройки Firebase.'),
+      within(header).getByText(/Синхронизация между устройствами появится после настройки Firebase\./),
     ).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Пробный экзамен' }))
