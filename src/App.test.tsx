@@ -33,6 +33,12 @@ describe('App navigation', () => {
       within(header).getByText(/Синхронизация между устройствами появится после настройки Firebase\./),
     ).toBeInTheDocument()
 
+    await user.click(screen.getByRole('button', { name: 'Грамматика B1' }))
+
+    expect(screen.getByRole('button', { name: 'Грамматика B1' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('heading', { name: 'Грамматика B1' })).toBeInTheDocument()
+    expect(screen.getAllByText('Падежи')[0]).toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: 'Пробный экзамен' }))
 
     expect(screen.getByRole('button', { name: 'Пробный экзамен' })).toHaveAttribute('aria-pressed', 'true')

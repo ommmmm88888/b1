@@ -641,6 +641,95 @@
   color: #f8fafc;
 }
 
+.grammar-b1-main {
+  display: grid;
+  gap: 10px;
+}
+
+.grammar-b1-block {
+  width: 100%;
+}
+
+.grammar-b1-block summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #f8fafc;
+  font-weight: 700;
+  list-style: none;
+}
+
+.grammar-b1-block summary::-webkit-details-marker {
+  display: none;
+}
+
+.grammar-b1-block summary small {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.grammar-b1-block__content {
+  padding-top: 10px;
+}
+
+.grammar-b1-card {
+  padding: 12px;
+}
+
+.grammar-b1-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.grammar-b1-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  background: rgba(2, 6, 23, 0.28);
+}
+
+.grammar-b1-table th,
+.grammar-b1-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  vertical-align: top;
+  text-align: left;
+  color: #e2e8f0;
+}
+
+.grammar-b1-table th {
+  color: #bfdbfe;
+  font-size: 0.82rem;
+  background: rgba(15, 23, 42, 0.88);
+}
+
+.grammar-b1-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.grammar-b1-table td:first-child {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.grammar-b1-examples {
+  display: grid;
+  gap: 8px;
+}
+
+.grammar-b1-mini-test {
+  display: grid;
+  gap: 10px;
+}
+
+.grammar-b1-mini-test__list {
+  display: grid;
+  gap: 10px;
+}
+
 .button--ghost {
   background: rgba(15, 23, 42, 0.42);
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { GrammarB1Screen } from './features/grammar-b1/GrammarB1Screen'
 import { GrammarDrillScreen } from './features/grammar/GrammarDrillScreen'
 import { IntensivePlanScreen } from './features/plan/IntensivePlanScreen'
 import { ListeningPracticeScreen } from './features/listening/ListeningPracticeScreen'
@@ -14,6 +15,7 @@ type AppMode =
   | 'trainer'
   | 'intensive'
   | 'grammar'
+  | 'grammar-b1'
   | 'writing'
   | 'speaking'
   | 'reading'
@@ -24,6 +26,7 @@ const modes: { id: AppMode; label: string }[] = [
   { id: 'trainer', label: 'Тренировка' },
   { id: 'intensive', label: 'Интенсив' },
   { id: 'grammar', label: 'Грамматика' },
+  { id: 'grammar-b1', label: 'Грамматика B1' },
   { id: 'writing', label: 'Письмо' },
   { id: 'speaking', label: 'Говорение' },
   { id: 'reading', label: 'Чтение' },
@@ -61,6 +64,7 @@ function App() {
         {mode === 'trainer' ? <TrainerScreen /> : null}
         {mode === 'intensive' ? <IntensivePlanScreen /> : null}
         {mode === 'grammar' ? <GrammarDrillScreen /> : null}
+        {mode === 'grammar-b1' ? <GrammarB1Screen /> : null}
         {mode === 'writing' ? <WritingPracticeScreen /> : null}
         {mode === 'speaking' ? <SpeakingPracticeScreen /> : null}
         {mode === 'reading' ? <ReadingPracticeScreen /> : null}
