@@ -38,11 +38,8 @@ function App() {
     <>
       <header className="mode-switch">
         <div className="mode-switch__bar">
-          <div className="mode-switch__top">
-            <div className="mode-switch__brand" aria-label="B1">
-              B1
-            </div>
-            <AccountSyncControl />
+          <div className="mode-switch__brand" aria-label="B1">
+            B1
           </div>
           <nav className="mode-switch__inner" aria-label="Основные разделы">
             {modes.map((item) => (
@@ -57,6 +54,7 @@ function App() {
               </button>
             ))}
           </nav>
+          <AccountSyncControl />
         </div>
       </header>
       {mode === 'trainer' ? <TrainerScreen /> : null}
