@@ -190,6 +190,35 @@ describe('progressSync', () => {
     expect(merged.sections.trainer.value).toEqual(remote.sections.trainer.value)
   })
 
+  it('does not erase cloud grammar progress with empty phone grammar state', () => {
+    const local: ProgressSnapshot = {
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:00:00.000Z',
+      sections: Object.fromEntries(
+        Object.entries(PROGRESS_STORAGE_KEYS).map(([section, key]) => [
+          section,
+          { key, value: null, updatedAt: null },
+        ]),
+      ) as ProgressSnapshot['sections'],
+    }
+    const remote = structuredClone(local)
+
+    local.sections.grammar.value = {
+      totalAttempts: 0,
+      correctAnswers: 0,
+      mistakesByTaskId: {},
+    }
+    remote.sections.grammar.value = {
+      totalAttempts: 4,
+      correctAnswers: 3,
+      mistakesByTaskId: { case: 1 },
+    }
+
+    const merged = mergeProgressSnapshots(local, remote)
+
+    expect(merged.sections.grammar.value).toEqual(remote.sections.grammar.value)
+  })
+
   it('writes remote trainer progress back to the same localStorage key TrainerScreen reads', () => {
     window.localStorage.clear()
 
@@ -353,6 +382,43 @@ describe('progressSync', () => {
       snapshot.sections.grammar.value,
     )
     expect(JSON.parse(window.localStorage.getItem('b1-grammar-session-v0') ?? 'null')).toEqual(snapshot.grammarSession)
+  })
+
+  it('merges grammar session snapshots without dropping a newer remote task', () => {
+    const local: ProgressSnapshot = {
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T10:00:00.000Z',
+      sections: Object.fromEntries(
+        Object.entries(PROGRESS_STORAGE_KEYS).map(([section, key]) => [
+          section,
+          { key, value: null, updatedAt: null },
+        ]),
+      ) as ProgressSnapshot['sections'],
+      grammarSession: {
+        schemaVersion: 1,
+        capturedAt: '2026-05-02T10:00:00.000Z',
+        topicId: 'cases-b1',
+        taskIndex: 1,
+        answer: 'локальный ответ',
+        checked: false,
+        correct: null,
+      },
+    }
+    const remote = structuredClone(local)
+
+    remote.grammarSession = {
+      schemaVersion: 1,
+      capturedAt: '2026-05-02T12:00:00.000Z',
+      topicId: 'cases-b1',
+      taskIndex: 4,
+      answer: 'удалённый ответ',
+      checked: true,
+      correct: true,
+    }
+
+    const merged = mergeProgressSnapshots(local, remote)
+
+    expect(merged.grammarSession).toEqual(remote.grammarSession)
   })
 
   it('normalizes remote grammar session snapshots', () => {

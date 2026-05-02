@@ -261,6 +261,16 @@ export function AccountSyncControl() {
             </strong>
           </div>
           <div className="account-sync__diagnostic">
+            <span>Local grammar session</span>
+            <strong>
+              {diagnostics.localGrammarSession
+                ? `${diagnostics.localGrammarSession.topicId} · ${diagnostics.localGrammarSession.taskIndex + 1} · ${
+                    diagnostics.localGrammarSession.checked ? 'checked' : 'open'
+                  } @${formatSyncTime(diagnostics.localGrammarSession.updatedAt)}`
+                : 'нет'}
+            </strong>
+          </div>
+          <div className="account-sync__diagnostic">
             <span>Cloud trainer</span>
             <strong>
               {cloudTrainer
@@ -273,6 +283,16 @@ export function AccountSyncControl() {
             <strong>
               {diagnostics.cloudGrammar
                 ? `a:${diagnostics.cloudGrammar.attempts} c:${diagnostics.cloudGrammar.correctAnswers} m:${diagnostics.cloudGrammar.mistakeTotal} @${formatSyncTime(diagnostics.cloudGrammar.updatedAt)}`
+                : 'нет'}
+            </strong>
+          </div>
+          <div className="account-sync__diagnostic">
+            <span>Cloud grammar session</span>
+            <strong>
+              {diagnostics.cloudGrammarSession
+                ? `${diagnostics.cloudGrammarSession.topicId} · ${diagnostics.cloudGrammarSession.taskIndex + 1} · ${
+                    diagnostics.cloudGrammarSession.checked ? 'checked' : 'open'
+                  } @${formatSyncTime(diagnostics.cloudGrammarSession.updatedAt)}`
                 : 'нет'}
             </strong>
           </div>

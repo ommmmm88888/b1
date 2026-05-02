@@ -16,7 +16,7 @@ import {
   saveGrammarSessionSnapshot,
   type GrammarSessionSnapshot,
 } from '../../lib/grammarSessionStorage'
-import type { GrammarTask, GrammarTopicId } from '../../types/grammar'
+import type { GrammarProgressState, GrammarTask, GrammarTopicId } from '../../types/grammar'
 
 interface GrammarSession {
   topicId: GrammarTopicId
@@ -47,10 +47,14 @@ function createSessionFromSnapshot(snapshot: GrammarSessionSnapshot | null): Gra
   }
 
   const topicId = snapshot.topicId as GrammarTopicId
+  const tasks = getTasksByTopic(topicId)
+  if (tasks.length === 0) {
+    return createSession(grammarTopics[0].id)
+  }
 
   return {
     topicId,
-    taskIndex: snapshot.taskIndex,
+    taskIndex: Math.min(Math.max(snapshot.taskIndex, 0), tasks.length - 1),
     answer: snapshot.answer,
     checked: snapshot.checked,
     correct: snapshot.correct,
@@ -97,6 +101,21 @@ export function GrammarDrillScreen() {
     skipSessionSyncSaveRef.current = true
     setProgress(loadGrammarProgress())
     setSession(createSessionFromSnapshot(loadGrammarSessionSnapshot()))
+  }, [])
+
+  const commitProgress = useCallback((updater: (current: GrammarProgressState) => GrammarProgressState) => {
+    setProgress((current) => {
+      const nextProgress = updater(current)
+      skipProgressSyncSaveRef.current = true
+      saveGrammarProgress(nextProgress)
+      return nextProgress
+    })
+  }, [])
+
+  const commitSession = useCallback((nextSession: GrammarSession) => {
+    skipSessionSyncSaveRef.current = true
+    saveGrammarSessionSnapshot(createSessionSnapshot(nextSession), window.localStorage, { notify: false })
+    setSession(nextSession)
   }, [])
 
   useEffect(() => {
@@ -188,9 +207,7 @@ export function GrammarDrillScreen() {
   function handleSelectTopic(topicId: GrammarTopicId) {
     const nextSession = createSession(topicId)
 
-    skipSessionSyncSaveRef.current = true
-    saveGrammarSessionSnapshot(createSessionSnapshot(nextSession), window.localStorage, { notify: false })
-    setSession(nextSession)
+    commitSession(nextSession)
     requestActiveCloudProgressSave()
   }
 
@@ -207,10 +224,8 @@ export function GrammarDrillScreen() {
       correct,
     }
 
-    setProgress((current) => recordGrammarAttempt(current, currentTask.id, correct))
-    skipSessionSyncSaveRef.current = true
-    saveGrammarSessionSnapshot(createSessionSnapshot(nextSession), window.localStorage, { notify: false })
-    setSession(nextSession)
+    commitProgress((current) => recordGrammarAttempt(current, currentTask.id, correct))
+    commitSession(nextSession)
     requestActiveCloudProgressSave()
 
     window.setTimeout(() => {
@@ -227,9 +242,7 @@ export function GrammarDrillScreen() {
       correct: null,
     }
 
-    skipSessionSyncSaveRef.current = true
-    saveGrammarSessionSnapshot(createSessionSnapshot(nextSession), window.localStorage, { notify: false })
-    setSession(nextSession)
+    commitSession(nextSession)
     requestActiveCloudProgressSave()
 
   }
