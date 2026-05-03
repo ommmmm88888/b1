@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { howToSayEntries } from '../data/howToSay'
-import { checkPolishPhrase, detectInputLanguage, findPolishSuggestion, normalizePhrase } from './howToSayMatcher'
+import {
+  checkPolishPhrase,
+  detectInputLanguage,
+  findPolishSuggestion,
+  getHowToSayPopularTemplates,
+  getHowToSayRelatedSuggestions,
+  normalizePhrase,
+} from './howToSayMatcher'
 
 describe('howToSayMatcher', () => {
   it('normalizes phrase text for matching', () => {
@@ -45,6 +52,33 @@ describe('howToSayMatcher', () => {
     }
   })
 
+  it('returns related suggestions when there is no exact match', () => {
+    const unknown = findPolishSuggestion('Я хочу что-то странное про работу и письмо.')
+    expect(unknown.status).toBe('unknown')
+    if (unknown.status === 'unknown') {
+      expect(unknown.suggestions.length).toBe(23)
+      expect(unknown.suggestions.every((suggestion) => suggestion.inputText.trim().length > 0)).toBe(true)
+    }
+  })
+
+  it('keeps work and writing suggestions close to the query', () => {
+    const workSuggestions = getHowToSayRelatedSuggestions('Мне нужна фраза про работу и офис.', 'work')
+    expect(workSuggestions.length).toBeGreaterThan(0)
+    expect(workSuggestions.some((suggestion) => suggestion.phrase.includes('Szukam pracy'))).toBe(true)
+
+    const writingSuggestions = getHowToSayRelatedSuggestions('Мне нужна фраза для письма.', 'writing')
+    expect(writingSuggestions.length).toBeGreaterThan(0)
+    expect(writingSuggestions.some((suggestion) => suggestion.phrase.includes('Piszę, ponieważ'))).toBe(true)
+  })
+
+  it('respects the selected category for direct suggestions', () => {
+    const requestSuggestion = findPolishSuggestion('Я хотел бы попросить о помощи.', { category: 'request' })
+    expect(requestSuggestion.status).toBe('suggestion')
+    if (requestSuggestion.status === 'suggestion') {
+      expect(requestSuggestion.suggestedPl).toContain('Chciałbym poprosić o')
+    }
+  })
+
   it('checks Polish phrases against known patterns', () => {
     const wrongPisze = checkPolishPhrase('Piszę bo chcę zapytać.')
     expect(wrongPisze.status).toBe('correction')
@@ -75,6 +109,17 @@ describe('howToSayMatcher', () => {
 
     const unknown = checkPolishPhrase('To jest bardzo dziwne zdanie.')
     expect(unknown.status).toBe('unknown')
+  })
+
+  it('keeps popular template cards complete', () => {
+    const templates = getHowToSayPopularTemplates('writing', 10)
+    expect(templates.length).toBeGreaterThan(0)
+    for (const template of templates) {
+      expect(template.inputText.trim().length).toBeGreaterThan(0)
+      expect(template.phrase.trim().length).toBeGreaterThan(0)
+      expect(template.explanationRu.trim().length).toBeGreaterThan(0)
+      expect(template.category).toBeTruthy()
+    }
   })
 
   it('keeps the helper data actionable and complete', () => {

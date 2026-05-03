@@ -983,6 +983,97 @@
   font-size: 0.78rem;
 }
 
+.grammar-how-to-say__category-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.grammar-how-to-say__category {
+  appearance: none;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(15, 23, 42, 0.72);
+  color: #cbd5e1;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.grammar-how-to-say__category--active {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(30, 41, 59, 0.96);
+  color: #f8fafc;
+}
+
+.grammar-how-to-say__templates-wrap {
+  display: grid;
+  gap: 8px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.32);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.grammar-how-to-say__section-label {
+  display: grid;
+  gap: 3px;
+}
+
+.grammar-how-to-say__section-label strong {
+  color: #f8fafc;
+}
+
+.grammar-how-to-say__templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 6px;
+  max-height: 250px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.grammar-how-to-say__template-card,
+.grammar-how-to-say__related-card {
+  appearance: none;
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  background: rgba(15, 23, 42, 0.68);
+  color: #e2e8f0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.grammar-how-to-say__template-card strong,
+.grammar-how-to-say__related-card strong {
+  color: #f8fafc;
+  font-size: 0.9rem;
+  line-height: 1.28;
+}
+
+.grammar-how-to-say__template-card span,
+.grammar-how-to-say__related-card span {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.grammar-how-to-say__template-tag {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.15);
+  color: #bfdbfe;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
 .grammar-how-to-say__result {
   display: grid;
   gap: 8px;
@@ -1005,6 +1096,32 @@
 .grammar-how-to-say__suggestions {
   display: grid;
   gap: 6px;
+}
+
+.grammar-how-to-say__related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+  max-height: 290px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.grammar-how-to-say__related-note {
+  color: #cbd5e1;
+}
+
+.grammar-how-to-say__result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.grammar-how-to-say__copy-feedback {
+  color: #93c5fd;
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
 .grammar-how-to-say__example {

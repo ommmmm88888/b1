@@ -3,6 +3,16 @@ export interface HowToSayExample {
   ru: string
 }
 
+export type HowToSayHelperCategory =
+  | 'all'
+  | 'writing'
+  | 'speaking'
+  | 'work'
+  | 'exam'
+  | 'request'
+  | 'complaint'
+  | 'mistake'
+
 export interface HowToSayEntry {
   id: string
   tags: string[]
@@ -16,6 +26,20 @@ export interface HowToSayEntry {
   correctPatterns?: string[]
   correctedPl?: string
   ruleRef?: string
+}
+
+export interface HowToSayMatchOptions {
+  category?: HowToSayHelperCategory
+}
+
+export interface HowToSayPhraseCard {
+  id: string
+  inputText: string
+  phrase: string
+  contextRu: string
+  explanationRu: string
+  category: HowToSayHelperCategory
+  kind: 'suggestion' | 'correction'
 }
 
 export interface HowToSaySuggestionResult {
@@ -51,7 +75,7 @@ export interface HowToSayUnknownResult {
   input: string
   language: 'ru' | 'pl' | 'unknown'
   message: string
-  suggestions: string[]
+  suggestions: HowToSayPhraseCard[]
 }
 
 export type HowToSayResult =

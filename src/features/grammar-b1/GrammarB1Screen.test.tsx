@@ -1,12 +1,18 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { GrammarB1Screen } from './GrammarB1Screen'
 
 describe('GrammarB1Screen', () => {
   beforeEach(() => {
     cleanup()
     window.localStorage.clear()
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    })
   })
 
   it('renders search, filters, and handbook sections from data', async () => {
@@ -16,8 +22,8 @@ describe('GrammarB1Screen', () => {
     expect(screen.getByRole('heading', { name: 'Справочник польского B1' })).toBeInTheDocument()
     expect(screen.getByRole('searchbox', { name: 'Поиск по справочнику' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Как сказать?' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Все' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Скоро' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Все' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: 'Скоро' }).length).toBeGreaterThan(0)
 
     const search = screen.getByRole('searchbox', { name: 'Поиск по справочнику' })
 
@@ -41,7 +47,7 @@ describe('GrammarB1Screen', () => {
     expect(screen.getByText('Ничего не найдено. Попробуйте: падежи, глаголы, письмо.')).toBeInTheDocument()
 
     await user.clear(search)
-    await user.click(screen.getByRole('button', { name: 'Все' }))
+    await user.click(screen.getAllByRole('button', { name: 'Все' })[0])
     expect(screen.getByRole('heading', { name: 'Падежи без паники' })).toBeInTheDocument()
   })
 
@@ -84,5 +90,63 @@ describe('GrammarB1Screen', () => {
     await user.click(button)
     expect(screen.getByText('Пока нет точного ответа')).toBeInTheDocument()
     expect(screen.getByText(/Пока нет точного варианта|Я пока проверяю только частые B1-шаблоны/)).toBeInTheDocument()
+  })
+
+  it('renders category buttons and popular templates', async () => {
+    const user = userEvent.setup()
+    render(<GrammarB1Screen />)
+
+    expect(screen.getAllByRole('button', { name: 'Письмо' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: 'Говорение' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: 'Работа' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: 'Экзамен' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('button', { name: 'Ошибки' }).length).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('button', { name: 'Работа' }))
+    expect(screen.getByText('Популярные шаблоны')).toBeInTheDocument()
+    expect(screen.getAllByText('Szukam pracy.').length).toBeGreaterThan(0)
+  })
+
+  it('shows related suggestions and supports copy feedback', async () => {
+    const user = userEvent.setup()
+    render(<GrammarB1Screen />)
+
+    const textarea = screen.getByRole('textbox', { name: 'Фраза для проверки' })
+    const button = screen.getByRole('button', { name: 'Проверить фразу' })
+
+    fireEvent.change(textarea, { target: { value: 'Я хочу странную фразу без шаблона.' } })
+    await user.click(button)
+
+    expect(screen.getByText('Пока нет точного ответа')).toBeInTheDocument()
+    expect(screen.getByText('Вот похожие шаблоны:')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Письмо|Говорение|Работа|Экзамен|Просьбы|Жалобы|Ошибки/ }).length).toBeGreaterThan(0)
+
+    fireEvent.change(textarea, { target: { value: 'Я ищу работу.' } })
+    await user.click(button)
+    expect(screen.getByText('Можно сказать так')).toBeInTheDocument()
+    const copyButton = screen.getByRole('button', { name: 'Скопировать' })
+    await user.click(copyButton)
+    expect(await screen.findByText('Скопировано')).toBeInTheDocument()
+  })
+
+  it('shows copy failure feedback when clipboard write fails', async () => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {},
+    })
+
+    const user = userEvent.setup()
+    render(<GrammarB1Screen />)
+
+    const textarea = screen.getByRole('textbox', { name: 'Фраза для проверки' })
+    const button = screen.getByRole('button', { name: 'Проверить фразу' })
+
+    fireEvent.change(textarea, { target: { value: 'Я ищу работу.' } })
+    await user.click(button)
+    await user.click(screen.getByRole('button', { name: 'Скопировать' }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Скопировано|Не удалось скопировать/)).toBeInTheDocument()
+    })
   })
 })
