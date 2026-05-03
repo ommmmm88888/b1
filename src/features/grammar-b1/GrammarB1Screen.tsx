@@ -8,10 +8,21 @@ import {
   howToSayHelperCategories,
 } from '../../lib/howToSayMatcher'
 import { filterHandbookTopics, type GrammarB1Filter } from '../../lib/grammarB1Search'
+import { copyPhraseToClipboard } from '../../lib/clipboard'
 import type { GrammarB1MiniTestItem, GrammarB1ReadyTopic, GrammarB1SoonTopic } from '../../types/grammarB1'
-import type { HowToSayHelperCategory, HowToSayResult } from '../../types/howToSay'
+import type {
+  HowToSayDisplayPhrase,
+  HowToSayGenderPreference,
+  HowToSayHelperCategory,
+  HowToSayResult,
+} from '../../types/howToSay'
 
 const helperCategoryButtonLabels: Array<{ key: HowToSayHelperCategory; label: string }> = howToSayHelperCategories
+const helperGenderButtons: Array<{ key: HowToSayGenderPreference; label: string }> = [
+  { key: 'male', label: 'мужской' },
+  { key: 'female', label: 'женский' },
+  { key: 'both', label: 'оба' },
+]
 
 function getHelperCategoryLabel(category: HowToSayHelperCategory): string {
   return helperCategoryButtonLabels.find((item) => item.key === category)?.label ?? 'Шаблон'
@@ -248,20 +259,30 @@ function SearchAndFilterPanel({
   )
 }
 
-function ResultPhraseActions({
-  phrase,
+function ResultDisplayPhrases({
+  phrases,
   onCopy,
   copyFeedback,
 }: {
-  phrase: string
+  phrases: HowToSayDisplayPhrase[]
   onCopy: (phrase: string) => void
   copyFeedback: string
 }) {
+  if (phrases.length === 0) {
+    return null
+  }
+
   return (
-    <div className="grammar-how-to-say__result-actions">
-      <button className="button" type="button" onClick={() => onCopy(phrase)}>
-        Скопировать
-      </button>
+    <div className="grammar-how-to-say__variant-list">
+      {phrases.map((item) => (
+        <div className="grammar-how-to-say__variant" key={`${item.label}:${item.phrase}`}>
+          <span className="grammar-how-to-say__variant-label">{item.label}</span>
+          <strong>{item.phrase}</strong>
+          <button className="button" type="button" onClick={() => onCopy(item.phrase)}>
+            Скопировать
+          </button>
+        </div>
+      ))}
       {copyFeedback ? <div className="grammar-how-to-say__copy-feedback">{copyFeedback}</div> : null}
     </div>
   )
@@ -282,11 +303,10 @@ function HowToSayResultCard({
     return (
       <div className="card-stage__answer grammar-how-to-say__result">
         <strong>Можно сказать так</strong>
-        <div className="grammar-how-to-say__phrase">{result.suggestedPl}</div>
         <div className="muted">{result.contextRu}</div>
         <div>{result.explanationRu}</div>
         {result.commonMistakeRu ? <div className="grammar-how-to-say__mistake">Частая ошибка: {result.commonMistakeRu}</div> : null}
-        <ResultPhraseActions phrase={result.suggestedPl} onCopy={onCopy} copyFeedback={copyFeedback} />
+        <ResultDisplayPhrases phrases={result.displayPhrases} onCopy={onCopy} copyFeedback={copyFeedback} />
         {result.examples.length > 0 ? (
           <div className="grammar-how-to-say__examples">
             {result.examples.map((example) => (
@@ -309,13 +329,9 @@ function HowToSayResultCard({
           <span>Было</span>
           <strong>{result.input}</strong>
         </div>
-        <div className="grammar-how-to-say__example">
-          <span>Стало</span>
-          <strong>{result.correctedPl}</strong>
-        </div>
         <div>{result.explanationRu}</div>
         {result.ruleRef ? <div className="grammar-how-to-say__mistake">Правило: {result.ruleRef}</div> : null}
-        <ResultPhraseActions phrase={result.correctedPl} onCopy={onCopy} copyFeedback={copyFeedback} />
+        <ResultDisplayPhrases phrases={result.displayPhrases} onCopy={onCopy} copyFeedback={copyFeedback} />
       </div>
     )
   }
@@ -324,9 +340,8 @@ function HowToSayResultCard({
     return (
       <div className="card-stage__answer grammar-how-to-say__result">
         <strong>Похоже, так можно</strong>
-        <div className="grammar-how-to-say__phrase">{result.phrase}</div>
         <div>{result.explanationRu}</div>
-        <ResultPhraseActions phrase={result.phrase} onCopy={onCopy} copyFeedback={copyFeedback} />
+        <ResultDisplayPhrases phrases={result.displayPhrases} onCopy={onCopy} copyFeedback={copyFeedback} />
       </div>
     )
   }
@@ -339,17 +354,20 @@ function HowToSayResultCard({
       {result.suggestions.length > 0 ? (
         <div className="grammar-how-to-say__related-grid">
           {result.suggestions.map((suggestion) => (
-            <button
-              className="grammar-how-to-say__related-card"
-              key={suggestion.id}
-              type="button"
-              onClick={() => onUseSuggestion(suggestion.inputText)}
-            >
-              <span className="card-stage__category">{getHelperCategoryLabel(suggestion.category)}</span>
-              <strong>{suggestion.phrase}</strong>
-              <span>{suggestion.contextRu || suggestion.explanationRu}</span>
-              <span className="grammar-how-to-say__related-note">{suggestion.explanationRu}</span>
-            </button>
+          <button
+            className="grammar-how-to-say__related-card"
+            key={suggestion.id}
+            type="button"
+            onClick={() => onUseSuggestion(suggestion.inputText)}
+          >
+            <span className="card-stage__category">{getHelperCategoryLabel(suggestion.category)}</span>
+            <strong>{suggestion.displayPhrases[0]?.phrase ?? suggestion.phrase}</strong>
+            {suggestion.displayPhrases.length > 1 ? (
+              <span>{suggestion.displayPhrases.map((item) => item.phrase).join(' / ')}</span>
+            ) : null}
+            <span>{suggestion.contextRu || suggestion.explanationRu}</span>
+            <span className="grammar-how-to-say__related-note">{suggestion.explanationRu}</span>
+          </button>
           ))}
         </div>
       ) : null}
@@ -361,48 +379,65 @@ function HowToSayPanel() {
   const [input, setInput] = useState('')
   const [result, setResult] = useState<HowToSayResult | null>(null)
   const [helperCategory, setHelperCategory] = useState<HowToSayHelperCategory>('all')
+  const [genderPreference, setGenderPreference] = useState<HowToSayGenderPreference>('both')
   const [copyFeedback, setCopyFeedback] = useState('')
 
   const popularTemplates = useMemo(
-    () => getHowToSayPopularTemplates(helperCategory, 35),
-    [helperCategory],
+    () => getHowToSayPopularTemplates(helperCategory, 35, genderPreference),
+    [genderPreference, helperCategory],
   )
 
   const handleCopy = (phrase: string) => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
-      setCopyFeedback('Не удалось скопировать. Можно выделить текст вручную.')
-      return
-    }
-
-    setCopyFeedback('Скопировано')
-    void navigator.clipboard.writeText(phrase).catch(() => {
-      setCopyFeedback('Не удалось скопировать. Можно выделить текст вручную.')
-    })
+    void copyPhraseToClipboard(phrase, typeof navigator === 'undefined' ? undefined : navigator.clipboard).then(
+      setCopyFeedback,
+    )
   }
 
-  const runHelper = (value: string) => {
+  const evaluateHelper = (
+    value: string,
+    category: HowToSayHelperCategory = helperCategory,
+    preferredGender: HowToSayGenderPreference = genderPreference,
+  ): HowToSayResult => {
     const trimmed = value.trim()
-    setInput(value)
-    setCopyFeedback('')
     const language = detectInputLanguage(trimmed)
 
     if (language === 'ru') {
-      setResult(findPolishSuggestion(trimmed, { category: helperCategory }))
-      return
+      return findPolishSuggestion(trimmed, { category, genderPreference: preferredGender })
     }
 
     if (language === 'pl') {
-      setResult(checkPolishPhrase(trimmed, { category: helperCategory }))
-      return
+      return checkPolishPhrase(trimmed, { category, genderPreference: preferredGender })
     }
 
-    setResult({
+    return {
       status: 'unknown',
       input: trimmed,
       language: 'unknown',
       message: 'Введите русскую или польскую фразу.',
-      suggestions: getHowToSayPopularTemplates(helperCategory, 23),
-    })
+      suggestions: getHowToSayPopularTemplates(category, 23, preferredGender),
+    }
+  }
+
+  const runHelper = (
+    value: string,
+    category: HowToSayHelperCategory = helperCategory,
+    preferredGender: HowToSayGenderPreference = genderPreference,
+  ) => {
+    setInput(value)
+    setCopyFeedback('')
+    setResult(evaluateHelper(value, category, preferredGender))
+  }
+
+  const rerunWithCurrentInput = (
+    category: HowToSayHelperCategory = helperCategory,
+    preferredGender: HowToSayGenderPreference = genderPreference,
+  ) => {
+    if (input.trim()) {
+      setResult(evaluateHelper(input, category, preferredGender))
+      return
+    }
+
+    setResult(null)
   }
 
   return (
@@ -420,7 +455,27 @@ function HowToSayPanel() {
             type="button"
             className={`grammar-how-to-say__category ${helperCategory === item.key ? 'grammar-how-to-say__category--active' : ''}`}
             aria-pressed={helperCategory === item.key}
-            onClick={() => setHelperCategory(item.key)}
+            onClick={() => {
+              setHelperCategory(item.key)
+              rerunWithCurrentInput(item.key, genderPreference)
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grammar-how-to-say__gender-row" role="group" aria-label="Предпочтительная форма">
+        {helperGenderButtons.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={`grammar-how-to-say__category ${genderPreference === item.key ? 'grammar-how-to-say__category--active' : ''}`}
+            aria-pressed={genderPreference === item.key}
+            onClick={() => {
+              setGenderPreference(item.key)
+              rerunWithCurrentInput(helperCategory, item.key)
+            }}
           >
             {item.label}
           </button>
@@ -442,7 +497,7 @@ function HowToSayPanel() {
             >
               <span className="grammar-how-to-say__template-tag">{getHelperCategoryLabel(template.category)}</span>
               <strong>{template.inputText}</strong>
-              <span>{template.phrase}</span>
+              <span>{template.displayPhrases.map((item) => item.phrase).join(' / ')}</span>
             </button>
           ))}
         </div>
@@ -477,7 +532,7 @@ function HowToSayPanel() {
           result={result}
           onCopy={handleCopy}
           copyFeedback={copyFeedback}
-          onUseSuggestion={runHelper}
+          onUseSuggestion={(phrase) => runHelper(phrase)}
         />
       ) : null}
     </section>

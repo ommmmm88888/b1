@@ -1,11 +1,14 @@
 import { howToSayEntries } from '../data/howToSay'
 import type {
   HowToSayCorrectionResult,
+  HowToSayDisplayPhrase,
   HowToSayEntry,
+  HowToSayGenderPreference,
   HowToSayHelperCategory,
   HowToSayLikelyCorrectResult,
   HowToSayMatchOptions,
   HowToSayPhraseCard,
+  HowToSayPhraseVariants,
   HowToSayResult,
   HowToSaySuggestionResult,
   HowToSayUnknownResult,
@@ -33,7 +36,6 @@ const howToSayCategoryRules: Record<Exclude<HowToSayHelperCategory, 'all'>, stri
     'письмо',
     'email',
     'odpowiedz',
-    'odpowiedz',
     'z powazaniem',
     'z gory dziekuje za odpowiedz',
     'prosz o odpowiedz',
@@ -46,8 +48,6 @@ const howToSayCategoryRules: Record<Exclude<HowToSayHelperCategory, 'all'>, stri
   ],
   speaking: [
     'говорение',
-    'mniemanie',
-    'mnie zdaniem',
     'moim zdaniem',
     'uwazam',
     'zgadzam sie',
@@ -56,7 +56,6 @@ const howToSayCategoryRules: Record<Exclude<HowToSayHelperCategory, 'all'>, stri
     'z drugiej strony',
     'na przyklad',
     'porownanie',
-    'comparison',
   ],
   work: [
     'работа',
@@ -69,7 +68,6 @@ const howToSayCategoryRules: Record<Exclude<HowToSayHelperCategory, 'all'>, stri
     'urzędzie',
     'mieszkanie',
     'telefon',
-    'konsultacja',
     'kurs',
     'doswiadczenie',
   ],
@@ -80,11 +78,9 @@ const howToSayCategoryRules: Record<Exclude<HowToSayHelperCategory, 'all'>, stri
     'na egzaminie',
     'pytanie',
     'odpowiedz',
-    'odpowiedz',
     'ustnie',
     'pisemnie',
     'zadanie',
-    'struktura odpowiedzi',
   ],
   request: [
     'prosze',
@@ -102,13 +98,11 @@ const howToSayCategoryRules: Record<Exclude<HowToSayHelperCategory, 'all'>, stri
     'reklamacja',
     'жалоба',
     'problem',
-    'problemu',
     'nie dziala',
     'nie działa',
     'zepsuty',
     'za drogo',
     'nie jestem zadowolony',
-    'nie dziala',
   ],
   mistake: ['blad', 'błąd', 'niepopraw', 'zle', 'ошибка', 'wrong'],
 }
@@ -170,7 +164,13 @@ function buildSearchableBlob(entry: HowToSayEntry): string {
   return normalizePhrase(
     [
       entry.suggestedPl,
+      entry.suggestedPlVariants?.male,
+      entry.suggestedPlVariants?.female,
+      entry.suggestedPlVariants?.neutral,
       entry.correctedPl,
+      entry.correctedPlVariants?.male,
+      entry.correctedPlVariants?.female,
+      entry.correctedPlVariants?.neutral,
       entry.contextRu,
       entry.explanationRu,
       entry.commonMistakeRu,
@@ -184,6 +184,72 @@ function buildSearchableBlob(entry: HowToSayEntry): string {
       .filter(Boolean)
       .join(' '),
   )
+}
+
+function scoreCategory(
+  entry: HowToSayEntry,
+  category: Exclude<HowToSayHelperCategory, 'all'>,
+  searchableBlob = buildSearchableBlob(entry),
+): number {
+  const normalizedTags = (entry.tags ?? []).map((tag) => normalizePhrase(tag))
+  const normalizedRules = howToSayCategoryRules[category].map((item) => normalizePhrase(item))
+  let score = 0
+
+  if (category === 'mistake' && (entry.incorrectPatterns?.length ?? 0) > 0) {
+    score += 4
+  }
+
+  if (category === 'writing' && (entry.suggestedPl ?? entry.correctedPl ?? '').includes('...')) {
+    score += 1
+  }
+
+  if (category === 'request' && (entry.suggestedPl ?? entry.correctedPl ?? '').toLowerCase().includes('pro')) {
+    score += 1
+  }
+
+  for (const tag of normalizedTags) {
+    if (normalizedRules.some((rule) => rule === tag || rule.includes(tag) || tag.includes(rule))) {
+      score += 3
+    }
+  }
+
+  for (const rule of normalizedRules) {
+    if (searchableBlob.includes(rule)) {
+      score += 2
+    }
+  }
+
+  return score
+}
+
+function scorePopularity(entry: HowToSayEntry): number {
+  let score = 0
+
+  if ((entry.ruInputPatterns?.length ?? 0) > 0) {
+    score += 4
+  }
+
+  if ((entry.incorrectPatterns?.length ?? 0) > 0) {
+    score += 3
+  }
+
+  if ((entry.correctPatterns?.length ?? 0) > 0) {
+    score += 2
+  }
+
+  if ((entry.examples?.length ?? 0) > 0) {
+    score += 2
+  }
+
+  if (entry.suggestedPl || entry.correctedPl) {
+    score += 2
+  }
+
+  if (entry.contextRu) {
+    score += 1
+  }
+
+  return score
 }
 
 function buildEntryCategory(entry: HowToSayEntry): Exclude<HowToSayHelperCategory, 'all'> {
@@ -237,72 +303,6 @@ function buildEntryCategory(entry: HowToSayEntry): Exclude<HowToSayHelperCategor
   return bestCategory
 }
 
-function scoreCategory(
-  entry: HowToSayEntry,
-  category: Exclude<HowToSayHelperCategory, 'all'>,
-  searchableBlob = buildSearchableBlob(entry),
-): number {
-  const normalizedTags = (entry.tags ?? []).map((tag) => normalizePhrase(tag))
-  const normalizedRules = howToSayCategoryRules[category].map((item) => normalizePhrase(item))
-  let score = 0
-
-  if (category === 'mistake' && (entry.incorrectPatterns?.length ?? 0) > 0) {
-    score += 4
-  }
-
-  if (category === 'writing' && entry.suggestedPl?.includes('...')) {
-    score += 1
-  }
-
-  if (category === 'request' && (entry.suggestedPl ?? entry.correctedPl ?? '').toLowerCase().includes('pro')) {
-    score += 1
-  }
-
-  for (const tag of normalizedTags) {
-    if (normalizedRules.some((rule) => rule === tag || rule.includes(tag) || tag.includes(rule))) {
-      score += 3
-    }
-  }
-
-  for (const rule of normalizedRules) {
-    if (searchableBlob.includes(rule)) {
-      score += 2
-    }
-  }
-
-  return score
-}
-
-function scorePopularity(entry: HowToSayEntry): number {
-  let score = 0
-
-  if ((entry.ruInputPatterns?.length ?? 0) > 0) {
-    score += 4
-  }
-
-  if ((entry.incorrectPatterns?.length ?? 0) > 0) {
-    score += 3
-  }
-
-  if ((entry.correctPatterns?.length ?? 0) > 0) {
-    score += 2
-  }
-
-  if ((entry.examples?.length ?? 0) > 0) {
-    score += 2
-  }
-
-  if (entry.suggestedPl || entry.correctedPl) {
-    score += 2
-  }
-
-  if (entry.contextRu) {
-    score += 1
-  }
-
-  return score
-}
-
 function scoreEntry(query: string, entry: HowToSayEntry, category: HowToSayHelperCategory = 'all'): number {
   const tokens = tokenize(query)
   const patternBlob = buildSearchableBlob(entry)
@@ -311,13 +311,101 @@ function scoreEntry(query: string, entry: HowToSayEntry, category: HowToSayHelpe
   return tokens.reduce((score, token) => (patternBlob.includes(token) ? score + 1 : score), categoryScore)
 }
 
+function getVariantLabel(variant: 'male' | 'female' | 'neutral' | 'fallback'): string {
+  if (variant === 'male') {
+    return 'Мужской вариант'
+  }
+
+  if (variant === 'female') {
+    return 'Женский вариант'
+  }
+
+  return 'Вариант'
+}
+
+function addDisplayPhrase(target: HowToSayDisplayPhrase[], label: string, phrase?: string): void {
+  const cleaned = phrase?.trim()
+  if (!cleaned) {
+    return
+  }
+
+  if (target.some((item) => item.phrase === cleaned)) {
+    return
+  }
+
+  target.push({ label, phrase: cleaned })
+}
+
+function resolveDisplayPhrases(
+  variants: HowToSayPhraseVariants | undefined,
+  fallbackPhrase: string | undefined,
+  genderPreference: HowToSayGenderPreference = 'both',
+): HowToSayDisplayPhrase[] {
+  const male = variants?.male?.trim()
+  const female = variants?.female?.trim()
+  const neutral = variants?.neutral?.trim()
+  const displayPhrases: HowToSayDisplayPhrase[] = []
+
+  if (genderPreference === 'male') {
+    if (male) {
+      addDisplayPhrase(displayPhrases, getVariantLabel('male'), male)
+    } else if (neutral) {
+      addDisplayPhrase(displayPhrases, getVariantLabel('neutral'), neutral)
+    } else if (female) {
+      addDisplayPhrase(displayPhrases, getVariantLabel('female'), female)
+    } else {
+      addDisplayPhrase(displayPhrases, getVariantLabel('fallback'), fallbackPhrase)
+    }
+    return displayPhrases
+  }
+
+  if (genderPreference === 'female') {
+    if (female) {
+      addDisplayPhrase(displayPhrases, getVariantLabel('female'), female)
+    } else if (neutral) {
+      addDisplayPhrase(displayPhrases, getVariantLabel('neutral'), neutral)
+    } else if (male) {
+      addDisplayPhrase(displayPhrases, getVariantLabel('male'), male)
+    } else {
+      addDisplayPhrase(displayPhrases, getVariantLabel('fallback'), fallbackPhrase)
+    }
+    return displayPhrases
+  }
+
+  addDisplayPhrase(displayPhrases, getVariantLabel('male'), male)
+  addDisplayPhrase(displayPhrases, getVariantLabel('female'), female)
+
+  if (displayPhrases.length === 0) {
+    addDisplayPhrase(displayPhrases, neutral ? getVariantLabel('neutral') : getVariantLabel('fallback'), neutral ?? fallbackPhrase)
+  } else if (neutral && !displayPhrases.some((item) => item.phrase === neutral)) {
+    addDisplayPhrase(displayPhrases, getVariantLabel('neutral'), neutral)
+  }
+
+  if (displayPhrases.length === 0) {
+    addDisplayPhrase(displayPhrases, getVariantLabel('fallback'), fallbackPhrase)
+  }
+
+  return displayPhrases
+}
+
+function resolvePrimaryPhrase(
+  variants: HowToSayPhraseVariants | undefined,
+  fallbackPhrase: string | undefined,
+  genderPreference: HowToSayGenderPreference = 'both',
+): string {
+  return resolveDisplayPhrases(variants, fallbackPhrase, genderPreference)[0]?.phrase ?? fallbackPhrase ?? ''
+}
+
 function buildPhraseCard(
   entry: HowToSayEntry,
   kind: 'suggestion' | 'correction',
   inputText: string,
   category?: HowToSayHelperCategory,
+  genderPreference: HowToSayGenderPreference = 'both',
 ): HowToSayPhraseCard | null {
-  const phrase = kind === 'correction' ? entry.correctedPl ?? entry.suggestedPl : entry.suggestedPl ?? entry.correctedPl
+  const variants = kind === 'correction' ? entry.correctedPlVariants : entry.suggestedPlVariants
+  const fallbackPhrase = kind === 'correction' ? entry.correctedPl ?? entry.suggestedPl : entry.suggestedPl ?? entry.correctedPl
+  const phrase = resolvePrimaryPhrase(variants, fallbackPhrase, genderPreference)
 
   if (!phrase) {
     return null
@@ -327,6 +415,7 @@ function buildPhraseCard(
     id: entry.id,
     inputText,
     phrase,
+    displayPhrases: resolveDisplayPhrases(variants, fallbackPhrase, genderPreference),
     contextRu: entry.contextRu ?? '',
     explanationRu: entry.explanationRu,
     category: category ?? buildEntryCategory(entry),
@@ -338,6 +427,7 @@ function buildCardsFromEntries(
   entries: HowToSayEntry[],
   category: HowToSayHelperCategory,
   limit: number,
+  genderPreference: HowToSayGenderPreference = 'both',
 ): HowToSayPhraseCard[] {
   const cards: HowToSayPhraseCard[] = []
   const seen = new Set<string>()
@@ -352,9 +442,9 @@ function buildCardsFromEntries(
       entry.suggestedPl ??
       entry.correctedPl ??
       ''
-    const card = buildPhraseCard(entry, kind, inputText, category === 'all' ? buildEntryCategory(entry) : category)
-    if (card && !seen.has(card.phrase)) {
-      seen.add(card.phrase)
+    const card = buildPhraseCard(entry, kind, inputText, category === 'all' ? buildEntryCategory(entry) : category, genderPreference)
+    if (card && !seen.has(card.id)) {
+      seen.add(card.id)
       cards.push(card)
     }
     if (cards.length >= limit) {
@@ -436,6 +526,7 @@ function getRankedEntries(input: string, category: HowToSayHelperCategory, limit
 export function getHowToSayPopularTemplates(
   category: HowToSayHelperCategory = 'all',
   limit = 35,
+  genderPreference: HowToSayGenderPreference = 'both',
 ): HowToSayPhraseCard[] {
   const candidates = [...howToSayEntries]
     .map((entry, index) => ({
@@ -453,23 +544,24 @@ export function getHowToSayPopularTemplates(
     })
     .map((item) => item.entry)
 
-  return buildCardsFromEntries(candidates, category, limit)
+  return buildCardsFromEntries(candidates, category, limit, genderPreference)
 }
 
 export function getHowToSayRelatedSuggestions(
   input: string,
   category: HowToSayHelperCategory = 'all',
   limit = 23,
+  genderPreference: HowToSayGenderPreference = 'both',
 ): HowToSayPhraseCard[] {
   const directEntries = getDirectMatchEntries(input, category)
-  const directCards = buildCardsFromEntries(directEntries, category, limit)
+  const directCards = buildCardsFromEntries(directEntries, category, limit, genderPreference)
   if (directCards.length >= limit) {
     return directCards.slice(0, limit)
   }
 
   const rankedEntries = getRankedEntries(input, category, limit)
-  const rankedCards = buildCardsFromEntries(rankedEntries, category, limit)
-  const popularCards = getHowToSayPopularTemplates(category, limit)
+  const rankedCards = buildCardsFromEntries(rankedEntries, category, limit, genderPreference)
+  const popularCards = getHowToSayPopularTemplates(category, limit, genderPreference)
   const mergedCards = mergeCards([...directCards, ...rankedCards, ...popularCards], limit)
 
   return mergedCards.slice(0, limit)
@@ -480,22 +572,29 @@ function buildUnknownResult(
   language: 'ru' | 'pl' | 'unknown',
   message: string,
   category: HowToSayHelperCategory = 'all',
+  genderPreference: HowToSayGenderPreference = 'both',
 ): HowToSayUnknownResult {
   return {
     status: 'unknown',
     input,
     language,
     message,
-    suggestions: getHowToSayRelatedSuggestions(input, category),
+    suggestions: getHowToSayRelatedSuggestions(input, category, 23, genderPreference),
   }
 }
 
-function buildSuggestionResult(input: string, entry: HowToSayEntry): HowToSaySuggestionResult {
+function buildSuggestionResult(
+  input: string,
+  entry: HowToSayEntry,
+  genderPreference: HowToSayGenderPreference = 'both',
+): HowToSaySuggestionResult {
+  const fallbackPhrase = entry.suggestedPl ?? entry.correctedPl ?? ''
   return {
     status: 'suggestion',
     input,
     language: 'ru',
-    suggestedPl: entry.suggestedPl ?? '',
+    suggestedPl: resolvePrimaryPhrase(entry.suggestedPlVariants, fallbackPhrase, genderPreference),
+    displayPhrases: resolveDisplayPhrases(entry.suggestedPlVariants, fallbackPhrase, genderPreference),
     contextRu: entry.contextRu ?? '',
     explanationRu: entry.explanationRu,
     commonMistakeRu: entry.commonMistakeRu,
@@ -503,18 +602,24 @@ function buildSuggestionResult(input: string, entry: HowToSayEntry): HowToSaySug
   }
 }
 
-function buildCorrectionResult(input: string, entry: HowToSayEntry): HowToSayCorrectionResult | HowToSayLikelyCorrectResult {
+function buildCorrectionResult(
+  input: string,
+  entry: HowToSayEntry,
+  genderPreference: HowToSayGenderPreference = 'both',
+): HowToSayCorrectionResult | HowToSayLikelyCorrectResult {
   const normalizedInput = normalizePhrase(input)
   const normalizedCorrect = (entry.correctPatterns ?? []).map((pattern) => normalizePhrase(pattern))
   const normalizedIncorrect = (entry.incorrectPatterns ?? []).map((pattern) => normalizePhrase(pattern))
 
   const isIncorrect = normalizedIncorrect.some((pattern) => normalizedInput === pattern || normalizedInput.includes(pattern))
   if (isIncorrect) {
+    const correctedFallback = entry.correctedPl ?? entry.suggestedPl ?? ''
     return {
       status: 'correction',
       input,
       language: 'pl',
-      correctedPl: entry.correctedPl ?? entry.suggestedPl ?? '',
+      correctedPl: resolvePrimaryPhrase(entry.correctedPlVariants, correctedFallback, genderPreference),
+      displayPhrases: resolveDisplayPhrases(entry.correctedPlVariants, correctedFallback, genderPreference),
       explanationRu: entry.explanationRu,
       ruleRef: entry.ruleRef,
     }
@@ -525,68 +630,67 @@ function buildCorrectionResult(input: string, entry: HowToSayEntry): HowToSayCor
   )
 
   if (isCorrect) {
+    const fallbackPhrase = entry.correctedPl ?? entry.suggestedPl ?? input
     return {
       status: 'likely-correct',
       input,
       language: 'pl',
-      phrase: entry.correctedPl ?? entry.suggestedPl ?? input,
+      phrase: resolvePrimaryPhrase(entry.correctedPlVariants, fallbackPhrase, genderPreference),
+      displayPhrases: resolveDisplayPhrases(entry.correctedPlVariants, fallbackPhrase, genderPreference),
       explanationRu: entry.explanationRu,
     }
   }
 
+  const correctedFallback = entry.correctedPl ?? entry.suggestedPl ?? ''
   return {
     status: 'correction',
     input,
     language: 'pl',
-    correctedPl: entry.correctedPl ?? entry.suggestedPl ?? '',
+    correctedPl: resolvePrimaryPhrase(entry.correctedPlVariants, correctedFallback, genderPreference),
+    displayPhrases: resolveDisplayPhrases(entry.correctedPlVariants, correctedFallback, genderPreference),
     explanationRu: entry.explanationRu,
     ruleRef: entry.ruleRef,
   }
 }
 
 function findBestSuggestionEntry(text: string, category: HowToSayHelperCategory): HowToSayEntry | undefined {
-  const directEntries = getDirectMatchEntries(text, category)
-  if (directEntries.length > 0) {
-    return directEntries[0]
-  }
-
-  return undefined
+  return getDirectMatchEntries(text, category)[0]
 }
 
 export function findPolishSuggestion(text: string, options: HowToSayMatchOptions = {}): HowToSayResult {
   const input = text.trim()
+  const category = options.category ?? 'all'
+  const genderPreference = options.genderPreference ?? 'both'
+
   if (!input) {
-    return buildUnknownResult(input, 'ru', 'Введите фразу, чтобы получить польский вариант.', options.category ?? 'all')
+    return buildUnknownResult(input, 'ru', 'Введите фразу, чтобы получить польский вариант.', category, genderPreference)
   }
 
-  const category = options.category ?? 'all'
   const entry = findBestSuggestionEntry(input, category)
 
-  if (!entry || !entry.suggestedPl) {
+  if (!entry) {
     return buildUnknownResult(
       input,
       'ru',
       'Пока нет точного варианта. Попробуйте короче: работа, квартира, экзамен, помощь.',
       category,
+      genderPreference,
     )
   }
 
-  return buildSuggestionResult(input, entry)
+  return buildSuggestionResult(input, entry, genderPreference)
 }
 
 export function checkPolishPhrase(text: string, options: HowToSayMatchOptions = {}): HowToSayResult {
   const input = text.trim()
+  const category = options.category ?? 'all'
+  const genderPreference = options.genderPreference ?? 'both'
+
   if (!input) {
-    return buildUnknownResult(
-      input,
-      'pl',
-      'Введите польскую фразу, чтобы я проверил частые шаблоны.',
-      options.category ?? 'all',
-    )
+    return buildUnknownResult(input, 'pl', 'Введите польскую фразу, чтобы я проверил частые шаблоны.', category, genderPreference)
   }
 
   const normalizedInput = normalizePhrase(input)
-  const category = options.category ?? 'all'
 
   const directCorrection = howToSayEntries.find((entry) =>
     (category === 'all' || scoreCategory(entry, category) > 0) &&
@@ -601,7 +705,7 @@ export function checkPolishPhrase(text: string, options: HowToSayMatchOptions = 
   )
 
   if (directCorrection) {
-    const result = buildCorrectionResult(input, directCorrection)
+    const result = buildCorrectionResult(input, directCorrection, genderPreference)
     if (result.status === 'correction') {
       return result
     }
@@ -620,7 +724,7 @@ export function checkPolishPhrase(text: string, options: HowToSayMatchOptions = 
   )
 
   if (directCorrect) {
-    const result = buildCorrectionResult(input, directCorrect)
+    const result = buildCorrectionResult(input, directCorrect, genderPreference)
     if (result.status === 'likely-correct') {
       return result
     }
@@ -631,5 +735,6 @@ export function checkPolishPhrase(text: string, options: HowToSayMatchOptions = 
     detectInputLanguage(input),
     'Я пока проверяю только частые B1-шаблоны. Попробуйте фразу из справочника или короче.',
     category,
+    genderPreference,
   )
 }

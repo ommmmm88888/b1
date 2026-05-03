@@ -20,35 +20,50 @@ describe('howToSayMatcher', () => {
     expect(detectInputLanguage('12345')).toBe('unknown')
   })
 
-  it('suggests Polish phrases for Russian input', () => {
-    const writingBecause = findPolishSuggestion('Я пишу, потому что хочу спросить.')
-    expect(writingBecause.status).toBe('suggestion')
-    if (writingBecause.status === 'suggestion') {
-      expect(writingBecause.suggestedPl).toBe('Piszę, ponieważ...')
+  it('resolves gender-aware suggestions for Russian input', () => {
+    const maleQuestion = findPolishSuggestion('Я хотел бы спросить.', { genderPreference: 'male' })
+    expect(maleQuestion.status).toBe('suggestion')
+    if (maleQuestion.status === 'suggestion') {
+      expect(maleQuestion.suggestedPl).toBe('Chciałbym zapytać.')
     }
 
-    const requestHelp = findPolishSuggestion('Я хотел бы попросить о помощи.')
-    expect(requestHelp.status).toBe('suggestion')
-    if (requestHelp.status === 'suggestion') {
-      expect(requestHelp.suggestedPl).toContain('Chciałbym poprosić o')
+    const femaleQuestion = findPolishSuggestion('Я хотел бы спросить.', { genderPreference: 'female' })
+    expect(femaleQuestion.status).toBe('suggestion')
+    if (femaleQuestion.status === 'suggestion') {
+      expect(femaleQuestion.suggestedPl).toBe('Chciałabym zapytać.')
     }
 
-    const complaint = findPolishSuggestion('Я хотел бы пожаловаться на этот продукт.')
-    expect(complaint.status).toBe('suggestion')
-    if (complaint.status === 'suggestion') {
-      expect(complaint.suggestedPl).toContain('Chciałbym złożyć reklamację na')
+    const bothQuestion = findPolishSuggestion('Я хотел бы спросить.', { genderPreference: 'both' })
+    expect(bothQuestion.status).toBe('suggestion')
+    if (bothQuestion.status === 'suggestion') {
+      expect(bothQuestion.displayPhrases.map((item) => item.phrase)).toEqual([
+        'Chciałbym zapytać.',
+        'Chciałabym zapytać.',
+      ])
     }
 
-    const oneSide = findPolishSuggestion('С одной стороны, это удобно.')
-    expect(oneSide.status).toBe('suggestion')
-    if (oneSide.status === 'suggestion') {
-      expect(oneSide.suggestedPl).toBe('Z jednej strony...')
+    const maleOffice = findPolishSuggestion('Я был в ужонде.', { genderPreference: 'male' })
+    expect(maleOffice.status).toBe('suggestion')
+    if (maleOffice.status === 'suggestion') {
+      expect(maleOffice.suggestedPl).toBe('Byłem w urzędzie.')
     }
 
-    const future = findPolishSuggestion('В будущем я хочу жить в Польше.')
-    expect(future.status).toBe('suggestion')
-    if (future.status === 'suggestion') {
-      expect(future.suggestedPl).toBe('W przyszłości chcę...')
+    const femaleOffice = findPolishSuggestion('Я была в ужонде.', { genderPreference: 'female' })
+    expect(femaleOffice.status).toBe('suggestion')
+    if (femaleOffice.status === 'suggestion') {
+      expect(femaleOffice.suggestedPl).toBe('Byłam w urzędzie.')
+    }
+
+    const maleTask = findPolishSuggestion('Я сделал задание.', { genderPreference: 'male' })
+    expect(maleTask.status).toBe('suggestion')
+    if (maleTask.status === 'suggestion') {
+      expect(maleTask.suggestedPl).toBe('Zrobiłem zadanie.')
+    }
+
+    const femaleTask = findPolishSuggestion('Я сделала задание.', { genderPreference: 'female' })
+    expect(femaleTask.status).toBe('suggestion')
+    if (femaleTask.status === 'suggestion') {
+      expect(femaleTask.suggestedPl).toBe('Zrobiłam zadanie.')
     }
   })
 
@@ -69,6 +84,13 @@ describe('howToSayMatcher', () => {
     const writingSuggestions = getHowToSayRelatedSuggestions('Мне нужна фраза для письма.', 'writing')
     expect(writingSuggestions.length).toBeGreaterThan(0)
     expect(writingSuggestions.some((suggestion) => suggestion.phrase.includes('Piszę, ponieważ'))).toBe(true)
+  })
+
+  it('preserves variant information in related suggestions', () => {
+    const related = getHowToSayRelatedSuggestions('Я хотел бы сказать что это важно.', 'speaking', 5, 'both')
+    expect(related.length).toBeGreaterThan(0)
+    expect(related[0].displayPhrases.some((item) => item.phrase === 'Chciałbym powiedzieć, że...')).toBe(true)
+    expect(related[0].displayPhrases.some((item) => item.phrase === 'Chciałabym powiedzieć, że...')).toBe(true)
   })
 
   it('respects the selected category for direct suggestions', () => {
@@ -112,23 +134,27 @@ describe('howToSayMatcher', () => {
   })
 
   it('keeps popular template cards complete', () => {
-    const templates = getHowToSayPopularTemplates('writing', 10)
+    const templates = getHowToSayPopularTemplates('writing', 10, 'female')
     expect(templates.length).toBeGreaterThan(0)
     for (const template of templates) {
       expect(template.inputText.trim().length).toBeGreaterThan(0)
       expect(template.phrase.trim().length).toBeGreaterThan(0)
       expect(template.explanationRu.trim().length).toBeGreaterThan(0)
       expect(template.category).toBeTruthy()
+      expect(template.displayPhrases.length).toBeGreaterThan(0)
     }
   })
 
   it('keeps the helper data actionable and complete', () => {
-    expect(howToSayEntries.length).toBeGreaterThanOrEqual(65)
+    expect(howToSayEntries.length).toBeGreaterThanOrEqual(90)
     for (const entry of howToSayEntries) {
       expect(entry.tags.length).toBeGreaterThan(0)
       expect(entry.explanationRu.trim().length).toBeGreaterThan(0)
-      if (entry.suggestedPl) {
-        expect(entry.explanationRu.trim().length).toBeGreaterThan(0)
+      if (entry.suggestedPlVariants) {
+        expect(entry.suggestedPlVariants.male ?? entry.suggestedPlVariants.female ?? entry.suggestedPlVariants.neutral).toBeTruthy()
+      }
+      if (entry.correctedPlVariants) {
+        expect(entry.correctedPlVariants.male ?? entry.correctedPlVariants.female ?? entry.correctedPlVariants.neutral).toBeTruthy()
       }
       if (entry.incorrectPatterns?.length) {
         expect(entry.correctedPl?.trim().length ?? 0).toBeGreaterThan(0)

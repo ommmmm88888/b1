@@ -989,6 +989,12 @@
   gap: 6px;
 }
 
+.grammar-how-to-say__gender-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .grammar-how-to-say__category {
   appearance: none;
   min-height: 32px;
@@ -1116,6 +1122,34 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.grammar-how-to-say__variant-list {
+  display: grid;
+  gap: 7px;
+}
+
+.grammar-how-to-say__variant {
+  display: grid;
+  gap: 5px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.34);
+  border: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+.grammar-how-to-say__variant-label {
+  color: #93c5fd;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.grammar-how-to-say__variant strong {
+  color: #f8fafc;
+  font-size: 0.95rem;
+  line-height: 1.3;
 }
 
 .grammar-how-to-say__copy-feedback {

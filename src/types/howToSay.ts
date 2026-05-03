@@ -3,6 +3,8 @@ export interface HowToSayExample {
   ru: string
 }
 
+export type HowToSayGenderPreference = 'male' | 'female' | 'both'
+
 export type HowToSayHelperCategory =
   | 'all'
   | 'writing'
@@ -19,23 +21,38 @@ export interface HowToSayEntry {
   explanationRu: string
   ruInputPatterns?: string[]
   suggestedPl?: string
+  suggestedPlVariants?: HowToSayPhraseVariants
   contextRu?: string
   commonMistakeRu?: string
   examples?: HowToSayExample[]
   incorrectPatterns?: string[]
   correctPatterns?: string[]
   correctedPl?: string
+  correctedPlVariants?: HowToSayPhraseVariants
   ruleRef?: string
 }
 
 export interface HowToSayMatchOptions {
   category?: HowToSayHelperCategory
+  genderPreference?: HowToSayGenderPreference
+}
+
+export interface HowToSayPhraseVariants {
+  male?: string
+  female?: string
+  neutral?: string
+}
+
+export interface HowToSayDisplayPhrase {
+  label: string
+  phrase: string
 }
 
 export interface HowToSayPhraseCard {
   id: string
   inputText: string
   phrase: string
+  displayPhrases: HowToSayDisplayPhrase[]
   contextRu: string
   explanationRu: string
   category: HowToSayHelperCategory
@@ -47,6 +64,7 @@ export interface HowToSaySuggestionResult {
   input: string
   language: 'ru'
   suggestedPl: string
+  displayPhrases: HowToSayDisplayPhrase[]
   contextRu: string
   explanationRu: string
   commonMistakeRu?: string
@@ -58,6 +76,7 @@ export interface HowToSayCorrectionResult {
   input: string
   language: 'pl'
   correctedPl: string
+  displayPhrases: HowToSayDisplayPhrase[]
   explanationRu: string
   ruleRef?: string
 }
@@ -67,6 +86,7 @@ export interface HowToSayLikelyCorrectResult {
   input: string
   language: 'pl'
   phrase: string
+  displayPhrases: HowToSayDisplayPhrase[]
   explanationRu: string
 }
 
