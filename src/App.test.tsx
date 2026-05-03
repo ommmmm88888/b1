@@ -39,7 +39,7 @@ describe('App navigation', () => {
 
     expect(screen.getByRole('button', { name: 'Справочник' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('heading', { name: 'Справочник польского B1' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Что повторить быстро' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Быстрый повтор' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Падежи без паники' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Пробный экзамен' }))

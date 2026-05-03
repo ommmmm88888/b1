@@ -11,93 +11,129 @@ interface ReferenceSection {
   id: ReferenceSectionId
   title: string
   quickTitle: string
-  when: string
+  when: string[]
   rule: string
   memory: string
   mistake: string
-  example: string
-  translation: string
-  cta: string
+  examples: Array<{ pl: string; ru: string }>
+  examPhrases: string[]
   status: 'ready' | 'soon'
-  note?: string
-  preview?: string[]
   quiz: GrammarB1QuizItem[]
+}
+
+interface UpcomingSection {
+  id: string
+  title: string
+  subtitle: string
+  why: string
+  helps: string
+  example: string
 }
 
 const readySections: ReferenceSection[] = [
   {
     id: 'cases',
     title: 'Падежи без паники',
-    quickTitle: 'Если путаетесь в окончаниях',
-    when: 'Когда не понимаете, какой падеж нужен после предлога, глагола или отрицания.',
-    rule: 'Сначала ищите сигнал: nie mam / komu? / kogo? / z kim? / w / na / o.',
-    memory: 'Nie ma? Genitiv. Komu даю? Celownik. Widzę kogo/co? Biernik.',
-    mistake: 'После отрицания оставлять словарь-форму: mam czas → nie mam czasu.',
-    example: 'Nie mam czasu.',
-    translation: 'У меня нет времени.',
-    cta: 'Именно падеж чаще всего выручает в письме и в устной части.',
+    quickTitle: 'Когда падеж нужен сразу',
+    when: [
+      'Это нужно, когда после глагола или предлога нужно быстро выбрать форму слова.',
+      'На B1 это чаще всего встречается в письме, в просьбах и в коротких ответах.',
+    ],
+    rule: 'Сначала ищите сигнал: kogo? co? = biernik, kogo? czego? = dopełniacz, z kim? z czym? = narzędnik.',
+    memory: 'Biernik = вижу и беру. Dopełniacz = нет или ищу. Narzędnik = с кем, с чем, кем являюсь.',
+    mistake: 'По привычке оставлять словарь-форму: nie mam czas, szukam praca, interesuję się sport.',
+    examples: [
+      { pl: 'Mam problem z mieszkaniem.', ru: 'У меня проблема с жильём.' },
+      { pl: 'Szukam pracy.', ru: 'Я ищу работу.' },
+      { pl: 'Interesuję się historią.', ru: 'Я интересуюсь историей.' },
+      { pl: 'Idę do urzędu.', ru: 'Я иду в учреждение.' },
+      { pl: 'Proszę o pomoc.', ru: 'Прошу о помощи.' },
+    ],
+    examPhrases: ['Mam problem z...', 'Szukam pracy / mieszkania', 'Interesuję się...', 'Proszę o pomoc'],
     status: 'ready',
     quiz: grammarB1Blocks.find((block) => block.id === 'cases')?.quiz ?? [],
   },
   {
     id: 'declension',
     title: 'Существительные и прилагательные',
-    quickTitle: 'Если сложно согласовать слова',
-    when: 'Когда нужно быстро согласовать род, число и падеж в фразе.',
-    rule: 'Прилагательное меняется вместе с существительным: добрый / dobra / dobre.',
-    memory: 'Męski, żeński, nijaki. W liczbie mnogiej: męskoosobowy / niemęskoosobowy.',
-    mistake: 'Писать по-русски логично, но по-польски неверно: w ładny mieście → w ładnym mieście.',
-    example: 'Mieszkam w ładnym mieście.',
-    translation: 'Я живу в красивом городе.',
-    cta: 'Если слово “звучит не так”, проверь окончание у прилагательного и у существительного вместе.',
+    quickTitle: 'Когда слова должны совпасть',
+    when: [
+      'Это нужно, когда существительное и прилагательное идут рядом и должны совпасть по форме.',
+      'На экзамене ошибка здесь сразу заметна, потому что фраза звучит неестественно.',
+    ],
+    rule: 'Прилагательное повторяет род, число и падеж существительного: dobry człowiek, dobra praca, dobre pytanie.',
+    memory: 'Сначала смотри на существительное, потом подгоняй прилагательное. Один предмет - одна форма.',
+    mistake: 'Переносить русскую модель: ważny sprawa, dobry pytanie, w ładny mieście.',
+    examples: [
+      { pl: 'dobry człowiek', ru: 'добрый человек' },
+      { pl: 'dobra praca', ru: 'хорошая работа' },
+      { pl: 'dobre pytanie', ru: 'хороший вопрос' },
+      { pl: 'dobrzy ludzie', ru: 'хорошие люди' },
+      { pl: 'dobre warunki', ru: 'хорошие условия' },
+    ],
+    examPhrases: ['ważna sprawa', 'trudna sytuacja', 'dobre rozwiązanie', 'ciekawy temat'],
     status: 'ready',
     quiz: grammarB1Blocks.find((block) => block.id === 'declension')?.quiz ?? [],
   },
   {
     id: 'verbs',
     title: 'Глаголы: время, вид, управление',
-    quickTitle: 'Если не хватает точности в речи',
-    when: 'Когда нужно сказать, идёт ли действие сейчас, повторяется ли оно или уже завершено.',
-    rule: 'Сначала выбери: процесс (co robić?) или результат (co zrobić?). Потом — нужную форму.',
-    memory: 'Jutro przeczytam = результат. Jutro będę czytać = процесс.',
-    mistake: 'Смешивать завершённое будущее и процесс: będę przeczytać — неправильно.',
-    example: 'Jutro napiszę e-mail.',
-    translation: 'Завтра я напишу e-mail.',
-    cta: 'Для B1 особенно важны być, mieć, iść, móc и пара видовых форм.',
+    quickTitle: 'Когда важны время и вид',
+    when: [
+      'Это нужно, когда надо рассказать о прошлом, привычке или результате действия.',
+      'Также это важно для управления глаголов: czekam na..., proszę o..., korzystam z..., pomagam komuś.',
+    ],
+    rule: 'Смотри на смысл: процесс = imperfective, результат = perfective. В прошлом ещё проверяй род и число говорящего.',
+    memory: 'Byłem / byłam, robiłem / robiłam, byliśmy / byłyśmy. Действие готово - часто совершенный вид.',
+    mistake: 'Смешивать вид и прошедшую форму: będę przeczytać, albo забывать род: я был / я была.',
+    examples: [
+      { pl: 'Byłem w urzędzie.', ru: 'Я был в учреждении.' },
+      { pl: 'Byłam w urzędzie.', ru: 'Я была в учреждении.' },
+      { pl: 'Robiłem zadanie.', ru: 'Я делал задание.' },
+      { pl: 'Robiłam zadanie.', ru: 'Я делала задание.' },
+      { pl: 'Byliśmy na kursie / Byłyśmy na kursie.', ru: 'Мы были на курсе.' },
+      { pl: 'Czekam na autobus.', ru: 'Я жду автобус.' },
+      { pl: 'Korzystam z internetu.', ru: 'Я пользуюсь интернетом.' },
+      { pl: 'Pomagam koledze.', ru: 'Я помогаю коллеге.' },
+    ],
+    examPhrases: ['Chciałbym opowiedzieć o...', 'Uważam, że...', 'Wczoraj musiałem...', 'W przyszłości chciałbym...'],
     status: 'ready',
     quiz: grammarB1Blocks.find((block) => block.id === 'verbs')?.quiz ?? [],
   },
 ]
 
-const upcomingSections: Array<{
-  id: string
-  title: string
-  subtitle: string
-  note: string
-}> = [
+const upcomingSections: UpcomingSection[] = [
   {
     id: 'pronouns-sie',
     title: 'Местоимения и частица się',
-    subtitle: 'Краткие формы, порядок слов и типичные глаголы.',
-    note: 'mnie / mi, tobie / ci, jego / go, bać się, uczyć się, podobać się.',
+    subtitle: 'Краткие формы и się',
+    why: 'Помогает не терять короткие слова и естественный порядок в фразе.',
+    helps: 'Чтение, письмо и разговор, где часто встречаются mnie, mi, go, ją, się.',
+    example: 'Boję się egzaminu, ale uczę się codziennie.',
   },
   {
     id: 'prepositions-cases',
     title: 'Предлоги и типичные связки',
-    subtitle: 'do, z, na, w, o, przy, po, dla, bez, od.',
-    note: 'Особенно полезно для письма и говорения.',
+    subtitle: 'do, z, na, w, o, przy, po',
+    why: 'Предлог сразу подсказывает падеж и делает фразу естественной.',
+    helps: 'Письмо, просьбы, короткие ответы и описание маршрута или цели.',
+    example: 'Jadę do lekarza i czekam na wizytę.',
   },
   {
     id: 'contrast',
-    title: 'Чем польский отличается от русского и украинского',
-    subtitle: 'Ложные друзья и привычки, которые мешают.',
-    note: 'aktualny, dywan, uroda, sklep, ударение и формы прошедшего времени.',
+    title: 'Отличия польского от русского и украинского',
+    subtitle: 'Ложные друзья и привычки',
+    why: 'Так проще не переносить русскую или украинскую модель прямо в польский.',
+    helps: 'Слова-ловушки, ударение, прошедшее время по родам и устойчивые фразы.',
+    example: 'Wczoraj byłem w domu, a dzisiaj odpoczywam.',
   },
   {
     id: 'exam-tasks',
-    title: 'Типичные задания B1',
-    subtitle: 'Что повторить перед экзаменом.',
-    note: 'Клише для письма, фразы для ответа и короткие стратегии.',
+    title: 'Типичные задания экзамена B1',
+    subtitle: 'Формулы для письма и ответа',
+    why: 'Даёт готовые стартовые фразы и экономит время на экзамене.',
+    helps: 'Письмо, устная часть, короткий комментарий и объяснение мнения.',
+    example: 'Dzień dobry, piszę w sprawie pracy.',
   },
 ]
 
@@ -126,8 +162,8 @@ function GrammarMiniTest({
   return (
     <section className="card-stage grammar-ref-mini" aria-labelledby={`${blockId}-quiz-title`}>
       <div className="card-stage__header">
-        <span className="card-stage__category">Мини-проверка</span>
-        <h3 id={`${blockId}-quiz-title`}>Проверь себя</h3>
+        <span className="card-stage__category">Проверить себя</span>
+        <h3 id={`${blockId}-quiz-title`}>Мини-тест</h3>
         <p className="muted">Ответы скрыты до действия пользователя.</p>
       </div>
 
@@ -167,19 +203,21 @@ function GrammarMiniTest({
       </div>
 
       <div className="button-row">
-        <button className="button button--primary" type="button" onClick={() => setRevealed(true)}>
-          Проверить себя
+        <button className="button button--primary" type="button" onClick={() => setRevealed((current) => !current)}>
+          {revealed ? 'Скрыть ответ' : 'Показать ответ'}
         </button>
-        <button
-          className="button"
-          type="button"
-          onClick={() => {
-            setAnswers({})
-            setRevealed(false)
-          }}
-        >
-          Скрыть ответы
-        </button>
+        {revealed ? (
+          <button
+            className="button"
+            type="button"
+            onClick={() => {
+              setAnswers({})
+              setRevealed(false)
+            }}
+          >
+            Очистить
+          </button>
+        ) : null}
       </div>
 
       {revealed ? (
@@ -195,9 +233,7 @@ function ReferenceSectionCard({ section }: { section: ReferenceSection }) {
   return (
     <article className="card-stage grammar-ref-card" id={section.id}>
       <div className="card-stage__header">
-        <span className="card-stage__category">
-          {section.status === 'ready' ? 'Готово' : 'Скоро'}
-        </span>
+        <span className="card-stage__category">{section.status === 'ready' ? 'Готово' : 'Скоро'}</span>
         <h2>{section.title}</h2>
         <p className="muted">{section.quickTitle}</p>
       </div>
@@ -205,28 +241,47 @@ function ReferenceSectionCard({ section }: { section: ReferenceSection }) {
       <div className="grammar-ref-card__grid">
         <div className="grammar-ref-card__tile">
           <span>Когда это нужно</span>
-          <strong>{section.when}</strong>
+          <div className="grammar-ref-card__lines">
+            {section.when.map((line) => (
+              <div className="grammar-ref-card__line" key={line}>
+                {line}
+              </div>
+            ))}
+          </div>
         </div>
         <div className="grammar-ref-card__tile">
           <span>Главное правило</span>
           <strong>{section.rule}</strong>
         </div>
         <div className="grammar-ref-card__tile">
-          <span>Как запомнить</span>
+          <span>Запомнить быстро</span>
           <strong>{section.memory}</strong>
         </div>
         <div className="grammar-ref-card__tile">
           <span>Частая ошибка</span>
           <strong>{section.mistake}</strong>
         </div>
-      </div>
-
-      <div className="card-stage__answer">
-        <strong>Правильно по-польски:</strong> {section.example} — {section.translation}
-      </div>
-
-      <div className="card-stage__hint">
-        <strong>Зачем это знать:</strong> {section.cta}
+        <div className="grammar-ref-card__tile grammar-ref-card__tile--wide">
+          <span>Правильно по-польски</span>
+          <div className="grammar-ref-card__examples">
+            {section.examples.map((example) => (
+              <div className="grammar-ref-card__example" key={example.pl}>
+                <strong>{example.pl}</strong>
+                <span>{example.ru}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="grammar-ref-card__tile grammar-ref-card__tile--wide">
+          <span>На экзамене пригодится</span>
+          <div className="grammar-ref-card__exam">
+            {section.examPhrases.map((phrase) => (
+              <div className="grammar-ref-card__exam-item" key={phrase}>
+                {phrase}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       <GrammarMiniTest blockId={section.id} questions={section.quiz} />
@@ -234,7 +289,7 @@ function ReferenceSectionCard({ section }: { section: ReferenceSection }) {
   )
 }
 
-function UpcomingSectionCard({ id, title, subtitle, note }: { id: string; title: string; subtitle: string; note: string }) {
+function UpcomingSectionCard({ id, title, subtitle, why, helps, example }: UpcomingSection) {
   return (
     <article className="card-stage grammar-ref-card grammar-ref-card--soon" id={id}>
       <div className="card-stage__header">
@@ -242,8 +297,19 @@ function UpcomingSectionCard({ id, title, subtitle, note }: { id: string; title:
         <h2>{title}</h2>
         <p className="muted">{subtitle}</p>
       </div>
-      <div className="card-stage__hint">
-        <strong>Что будет внутри:</strong> {note}
+      <div className="grammar-ref-soon">
+        <div className="grammar-ref-soon__item">
+          <span>Почему это важно</span>
+          <strong>{why}</strong>
+        </div>
+        <div className="grammar-ref-soon__item">
+          <span>Что поможет</span>
+          <strong>{helps}</strong>
+        </div>
+        <div className="grammar-ref-soon__item">
+          <span>Пример</span>
+          <strong>{example}</strong>
+        </div>
       </div>
     </article>
   )
@@ -284,7 +350,7 @@ export function GrammarB1Screen() {
         </section>
 
         <aside className="side-card">
-          <h2>Что повторить быстро</h2>
+          <h2>Быстрый повтор</h2>
           <p>Три самых полезных точки входа для повторения без перегруза.</p>
           <div className="grammar-ref-quick-grid">
             {readySections.map((section) => (
