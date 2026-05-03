@@ -33,11 +33,11 @@ const readyTopics: GrammarB1ReadyTopic[] = [
       { pl: 'Proszę o pomoc', ru: 'Прошу о помощи.' },
     ],
     miniTest: [
-      { prompt: 'Nie mam ___ . (czas)', answer: 'czasu' },
-      { prompt: 'Pomagam ___ . (mama)', answer: 'mamie' },
-      { prompt: 'Widzę ___ w parku. (pies)', answer: 'psa' },
-      { prompt: 'Jestem ___ . (student)', answer: 'studentem' },
-      { prompt: 'Myślę o ___ . (egzamin)', answer: 'egzaminie' },
+      { prompt: 'Nie mam ___ . (czas)', answer: 'czasu', explanation: 'После nie mam нужен dopełniacz.' },
+      { prompt: 'Pomagam ___ . (mama)', answer: 'mamie', explanation: 'Pomagam komu? czemu? = celownik.' },
+      { prompt: 'Widzę ___ w parku. (pies)', answer: 'psa', explanation: 'Widzę kogo? co? = biernik.' },
+      { prompt: 'Jestem ___ . (student)', answer: 'studentem', explanation: 'Jestem kim? czym? = narzędnik.' },
+      { prompt: 'Myślę o ___ . (egzamin)', answer: 'egzaminie', explanation: 'Po o нужен miejscownik.' },
     ],
   },
   {
@@ -67,11 +67,19 @@ const readyTopics: GrammarB1ReadyTopic[] = [
       { pl: 'ciekawy temat', ru: 'интересная тема.' },
     ],
     miniTest: [
-      { prompt: 'Widzę ___ . (dobry student)', answer: 'dobrego studenta' },
-      { prompt: 'Nie mam ___ . (nowa książka)', answer: 'nowej książki' },
-      { prompt: 'Pomagam ___ . (małe dziecko)', answer: 'małemu dziecku' },
-      { prompt: 'Rozmawiam z ___ . (polski lekarz)', answer: 'polskim lekarzem' },
-      { prompt: 'Mieszkam w ___ . (ładne miasto)', answer: 'ładnym mieście' },
+      {
+        prompt: 'Widzę ___ . (dobry student)',
+        answer: 'dobrego studenta',
+        explanation: 'Męskoosobowy Biernik często совпадает с Dopełniacz.',
+      },
+      { prompt: 'Nie mam ___ . (nowa książka)', answer: 'nowej książki', explanation: 'Po nie mam нужен dopełniacz.' },
+      { prompt: 'Pomagam ___ . (małe dziecko)', answer: 'małemu dziecku', explanation: 'Po pomagam нужен celownik.' },
+      {
+        prompt: 'Rozmawiam z ___ . (polski lekarz)',
+        answer: 'polskim lekarzem',
+        explanation: 'Po z ким? czym? нужен narzędnik.',
+      },
+      { prompt: 'Mieszkam w ___ . (ładne miasto)', answer: 'ładnym mieście', explanation: 'Po w нужна форма miejscownika.' },
     ],
   },
   {
@@ -105,12 +113,12 @@ const readyTopics: GrammarB1ReadyTopic[] = [
       { pl: 'W przyszłości chciałbym...', ru: 'В будущем я хотел бы...' },
     ],
     miniTest: [
-      { prompt: 'Ja, мужчина, ___ w urzędzie. (być)', answer: 'byłem' },
-      { prompt: 'Ja, женщина, ___ w urzędzie. (być)', answer: 'byłam' },
-      { prompt: 'Ja, мужчина, ___ zadanie. (robić)', answer: 'robiłem' },
-      { prompt: 'Ja, женщина, ___ zadanie. (robić)', answer: 'robiłam' },
-      { prompt: 'My, мужчины, ___ na kursie. (być)', answer: 'byliśmy' },
-      { prompt: 'My, женщины, ___ na kursie. (być)', answer: 'byłyśmy' },
+      { prompt: 'Ja, мужчина, ___ w urzędzie. (być)', answer: 'byłem', explanation: 'W прошлом форма показывает мужской род.' },
+      { prompt: 'Ja, женщина, ___ w urzędzie. (być)', answer: 'byłam', explanation: 'Женский род в прошлом имеет окончание -am.' },
+      { prompt: 'Ja, мужчина, ___ zadanie. (robić)', answer: 'robiłem', explanation: 'Несовершенный вид в прошлом по роду.' },
+      { prompt: 'Ja, женщина, ___ zadanie. (robić)', answer: 'robiłam', explanation: 'Женская форма to samo znaczenie, inna końcówka.' },
+      { prompt: 'My, мужчины, ___ na kursie. (być)', answer: 'byliśmy', explanation: 'Мы-мужчины = byliśmy.' },
+      { prompt: 'My, женщины, ___ na kursie. (być)', answer: 'byłyśmy', explanation: 'Мы-женщины = byłyśmy.' },
     ],
   },
 ]
@@ -120,8 +128,8 @@ const soonTopics: GrammarB1SoonTopic[] = [
     id: 'pronouns-sie',
     title: 'Местоимения и частица się',
     status: 'soon',
-    whyItMatters: 'Помогает не терять короткие слова и естественный порядок в фразе.',
-    helpsWith: 'Чтение, письмо и разговор, где часто встречаются mnie, mi, go, ją, się.',
+    whyItMatters: 'Помогает не терять короткие слова и не ломать порядок в фразе.',
+    helpsWith: 'Фразы typu: daj mi, powiedz mu, uczę się, boję się, podoba mi się.',
     examplePhrase: { pl: 'Boję się egzaminu, ale uczę się codziennie.', ru: 'Я боюсь экзамена, но учусь каждый день.' },
   },
   {
@@ -129,7 +137,7 @@ const soonTopics: GrammarB1SoonTopic[] = [
     title: 'Предлоги и типичные связки',
     status: 'soon',
     whyItMatters: 'Предлог сразу подсказывает падеж и делает фразу естественной.',
-    helpsWith: 'Письмо, просьбы, короткие ответы и описание маршрута или цели.',
+    helpsWith: 'Письмо, просьбы, маршруты и связки типа: do domu, z pracy, na kursie, w urzędzie.',
     examplePhrase: { pl: 'Jadę do lekarza i czekam na wizytę.', ru: 'Я еду к врачу и жду визита.' },
   },
   {
@@ -137,7 +145,7 @@ const soonTopics: GrammarB1SoonTopic[] = [
     title: 'Порядок слов',
     status: 'soon',
     whyItMatters: 'Польская фраза звучит естественнее, когда короткие слова стоят в привычном месте.',
-    helpsWith: 'Ответы, письма и устная речь, где важны простые и понятные фразы.',
+    helpsWith: 'Ответы, письма и устная речь, где важны простые фразы и место для nie / mi / się.',
     examplePhrase: { pl: 'Dzisiaj po pracy idę do domu.', ru: 'Сегодня после работы я иду домой.' },
   },
   {
@@ -145,7 +153,7 @@ const soonTopics: GrammarB1SoonTopic[] = [
     title: 'Письмо: готовые формулы',
     status: 'soon',
     whyItMatters: 'Даёт готовые стартовые фразы и экономит время на экзамене.',
-    helpsWith: 'Письмо, вступление, просьбы и завершение текста.',
+    helpsWith: 'Письмо, вступление, просьбы, уточнения и завершение текста.',
     examplePhrase: { pl: 'Dzień dobry, piszę w sprawie pracy.', ru: 'Добрый день, пишу по поводу работы.' },
   },
   {
@@ -153,7 +161,7 @@ const soonTopics: GrammarB1SoonTopic[] = [
     title: 'Говорение: фразы для ответа',
     status: 'soon',
     whyItMatters: 'Помогает начать ответ без паузы и звучать спокойно.',
-    helpsWith: 'Короткие ответы, мнение и объяснение своей позиции.',
+    helpsWith: 'Короткие ответы, мнение и простое объяснение своей позиции.',
     examplePhrase: { pl: 'Uważam, że to dobre rozwiązanie.', ru: 'Я считаю, что это хорошее решение.' },
   },
 ]
