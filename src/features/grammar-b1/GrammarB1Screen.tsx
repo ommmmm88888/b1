@@ -1,7 +1,19 @@
 import { useMemo, useState } from 'react'
 import { grammarB1Handbook } from '../../data/grammarB1'
-import { normalizePolishAnswer } from '../../lib/answerCheck'
-import type { GrammarB1MiniTestItem, GrammarB1ReadyTopic } from '../../types/grammarB1'
+import { checkPolishPhrase, detectInputLanguage, findPolishSuggestion } from '../../lib/howToSayMatcher'
+import { filterHandbookTopics, type GrammarB1Filter } from '../../lib/grammarB1Search'
+import type { GrammarB1MiniTestItem, GrammarB1ReadyTopic, GrammarB1SoonTopic } from '../../types/grammarB1'
+import type { HowToSayResult } from '../../types/howToSay'
+
+const handbookFilters: Array<{ key: GrammarB1Filter; label: string }> = [
+  { key: 'all', label: 'Все' },
+  { key: 'ready', label: 'Готово' },
+  { key: 'soon', label: 'Скоро' },
+  { key: 'cases', label: 'Падежи' },
+  { key: 'verbs', label: 'Глаголы' },
+  { key: 'writing', label: 'Письмо' },
+  { key: 'speaking', label: 'Говорение' },
+]
 
 function GrammarMiniTest({
   blockId,
@@ -16,7 +28,7 @@ function GrammarMiniTest({
   const score = useMemo(
     () =>
       questions.filter(
-        (question) => normalizePolishAnswer(question.answer) === normalizePolishAnswer(answers[question.prompt] ?? ''),
+        (question) => question.answer.trim().toLowerCase() === (answers[question.prompt] ?? '').trim().toLowerCase(),
       ).length,
     [answers, questions],
   )
@@ -32,7 +44,7 @@ function GrammarMiniTest({
       <div className="grammar-ref-mini__list">
         {questions.map((question, index) => {
           const value = answers[question.prompt] ?? ''
-          const isCorrect = normalizePolishAnswer(question.answer) === normalizePolishAnswer(value)
+          const isCorrect = question.answer.trim().toLowerCase() === value.trim().toLowerCase()
 
           return (
             <label className="note-field" key={question.prompt}>
@@ -151,46 +163,225 @@ function ReadyTopicCard({ topic }: { topic: GrammarB1ReadyTopic }) {
   )
 }
 
-function SoonTopicCard({
-  title,
-  whyItMatters,
-  helpsWith,
-  examplePhrase,
-}: {
-  title: string
-  whyItMatters: string
-  helpsWith: string
-  examplePhrase: { pl: string; ru: string }
-}) {
+function SoonTopicCard({ topic }: { topic: GrammarB1SoonTopic }) {
   return (
     <article className="card-stage grammar-ref-card grammar-ref-card--soon">
       <div className="card-stage__header">
         <span className="card-stage__category">Скоро</span>
-        <h2>{title}</h2>
+        <h2>{topic.title}</h2>
       </div>
       <div className="grammar-ref-soon">
         <div className="grammar-ref-soon__item">
           <span>Почему это важно</span>
-          <strong>{whyItMatters}</strong>
+          <strong>{topic.whyItMatters}</strong>
         </div>
         <div className="grammar-ref-soon__item">
           <span>Что поможет</span>
-          <strong>{helpsWith}</strong>
+          <strong>{topic.helpsWith}</strong>
         </div>
         <div className="grammar-ref-soon__item">
           <span>Пример</span>
-          <strong>{examplePhrase.pl}</strong>
-          <span>{examplePhrase.ru}</span>
+          <strong>{topic.examplePhrase.pl}</strong>
+          <span>{topic.examplePhrase.ru}</span>
         </div>
       </div>
     </article>
   )
 }
 
+function SearchAndFilterPanel({
+  query,
+  filter,
+  onQueryChange,
+  onFilterChange,
+}: {
+  query: string
+  filter: GrammarB1Filter
+  onQueryChange: (value: string) => void
+  onFilterChange: (value: GrammarB1Filter) => void
+}) {
+  return (
+    <section className="card-stage grammar-ref-search">
+      <div className="card-stage__header">
+        <span className="card-stage__category">Поиск</span>
+        <h2>Найти тему, ошибку или пример</h2>
+        <p className="muted">Ищет по названию, правилу, ошибке, примерам и экзаменационным фразам.</p>
+      </div>
+
+      <label className="note-field grammar-ref-search__field">
+        <span className="sr-only">Поиск по справочнику</span>
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => onQueryChange(event.currentTarget.value)}
+          placeholder="Найти тему, ошибку или пример"
+          aria-label="Поиск по справочнику"
+        />
+      </label>
+
+      <div className="grammar-ref-filter-row" role="group" aria-label="Фильтр тем">
+        {handbookFilters.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={`grammar-ref-filter ${filter === item.key ? 'grammar-ref-filter--active' : ''}`}
+            aria-pressed={filter === item.key}
+            onClick={() => onFilterChange(item.key)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function HowToSayResultCard({ result }: { result: HowToSayResult }) {
+  if (result.status === 'suggestion') {
+    return (
+      <div className="card-stage__answer grammar-how-to-say__result">
+        <strong>Можно сказать так</strong>
+        <div className="grammar-how-to-say__phrase">{result.suggestedPl}</div>
+        <div className="muted">{result.contextRu}</div>
+        <div>{result.explanationRu}</div>
+        {result.commonMistakeRu ? <div className="grammar-how-to-say__mistake">Частая ошибка: {result.commonMistakeRu}</div> : null}
+        {result.examples.length > 0 ? (
+          <div className="grammar-how-to-say__examples">
+            {result.examples.map((example) => (
+              <div key={example.pl} className="grammar-how-to-say__example">
+                <strong>{example.pl}</strong>
+                <span>{example.ru}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (result.status === 'correction') {
+    return (
+      <div className="card-stage__answer grammar-how-to-say__result">
+        <strong>Лучше исправить</strong>
+        <div className="grammar-how-to-say__example">
+          <span>Было</span>
+          <strong>{result.input}</strong>
+        </div>
+        <div className="grammar-how-to-say__example">
+          <span>Стало</span>
+          <strong>{result.correctedPl}</strong>
+        </div>
+        <div>{result.explanationRu}</div>
+        {result.ruleRef ? <div className="grammar-how-to-say__mistake">Правило: {result.ruleRef}</div> : null}
+      </div>
+    )
+  }
+
+  if (result.status === 'likely-correct') {
+    return (
+      <div className="card-stage__answer grammar-how-to-say__result">
+        <strong>Похоже, так можно</strong>
+        <div className="grammar-how-to-say__phrase">{result.phrase}</div>
+        <div>{result.explanationRu}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card-stage__answer grammar-how-to-say__result">
+      <strong>Пока нет точного ответа</strong>
+      <div>{result.message}</div>
+      {result.suggestions.length > 0 ? (
+        <div className="grammar-how-to-say__suggestions">
+          {result.suggestions.map((suggestion) => (
+            <span className="grammar-how-to-say__suggestion" key={suggestion}>
+              {suggestion}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function HowToSayPanel() {
+  const [input, setInput] = useState('')
+  const [result, setResult] = useState<HowToSayResult | null>(null)
+
+  const handleCheck = () => {
+    const trimmed = input.trim()
+    const language = detectInputLanguage(trimmed)
+
+    if (language === 'ru') {
+      setResult(findPolishSuggestion(trimmed))
+      return
+    }
+
+    if (language === 'pl') {
+      setResult(checkPolishPhrase(trimmed))
+      return
+    }
+
+    setResult({
+      status: 'unknown',
+      input: trimmed,
+      language: 'unknown',
+      message: 'Введите русскую или польскую фразу.',
+      suggestions: [],
+    })
+  }
+
+  return (
+    <section className="card-stage grammar-how-to-say">
+      <div className="card-stage__header">
+        <span className="card-stage__category">Как сказать?</span>
+        <h2>Как сказать?</h2>
+        <p className="muted">Введите фразу по-русски - получите польский вариант. Введите по-польски - проверим частые ошибки.</p>
+      </div>
+
+      <label className="note-field note-field--compact grammar-how-to-say__field">
+        <span className="sr-only">Фраза для проверки</span>
+        <textarea
+          value={input}
+          onChange={(event) => setInput(event.currentTarget.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && event.ctrlKey) {
+              event.preventDefault()
+              handleCheck()
+            }
+          }}
+          placeholder="Например: Я ищу работу / Szukam pracę"
+          aria-label="Фраза для проверки"
+          spellCheck={false}
+        />
+      </label>
+
+      <div className="button-row">
+        <button className="button button--primary" type="button" onClick={handleCheck}>
+          Проверить фразу
+        </button>
+        <div className="grammar-how-to-say__hint">Ctrl+Enter - проверить.</div>
+      </div>
+
+      {result ? <HowToSayResultCard result={result} /> : null}
+    </section>
+  )
+}
+
 export function GrammarB1Screen() {
   const { hero, quickRepeatCards, readySection, soonSection, readyTopics, soonTopics } = grammarB1Handbook
-  const readyCount = readyTopics.length
-  const soonCount = soonTopics.length
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedFilter, setSelectedFilter] = useState<GrammarB1Filter>('all')
+
+  const filteredReadyTopics = useMemo(
+    () => filterHandbookTopics(readyTopics, searchQuery, selectedFilter),
+    [readyTopics, searchQuery, selectedFilter],
+  )
+  const filteredSoonTopics = useMemo(
+    () => filterHandbookTopics(soonTopics, searchQuery, selectedFilter),
+    [soonTopics, searchQuery, selectedFilter],
+  )
+  const hasResults = filteredReadyTopics.length > 0 || filteredSoonTopics.length > 0
 
   return (
     <main className="app-shell">
@@ -236,43 +427,61 @@ export function GrammarB1Screen() {
         </aside>
 
         <section className="trainer-card trainer-card--compact grammar-ref-main" aria-label={hero.title}>
-          <div className="grammar-ref-section-title">
-            <div>
-              <span className="card-stage__category">{readySection.label}</span>
-              <h2>{readySection.title}</h2>
+          <div className="grammar-ref-tools">
+            <SearchAndFilterPanel
+              query={searchQuery}
+              filter={selectedFilter}
+              onQueryChange={setSearchQuery}
+              onFilterChange={setSelectedFilter}
+            />
+            <HowToSayPanel />
+          </div>
+
+          {hasResults ? (
+            <>
+              {filteredReadyTopics.length > 0 ? (
+                <>
+                  <div className="grammar-ref-section-title">
+                    <div>
+                      <span className="card-stage__category">{readySection.label}</span>
+                      <h2>{readySection.title}</h2>
+                    </div>
+                    <p className="muted">
+                      Если вы путаетесь в окончаниях, согласовании или глаголах, начните отсюда.
+                    </p>
+                  </div>
+
+                  <div className="grammar-ref-topics">
+                    {filteredReadyTopics.map((topic) => (
+                      <ReadyTopicCard key={topic.id} topic={topic} />
+                    ))}
+                  </div>
+                </>
+              ) : null}
+
+              {filteredSoonTopics.length > 0 ? (
+                <>
+                  <div className="grammar-ref-section-title">
+                    <div>
+                      <span className="card-stage__category">{soonSection.label}</span>
+                      <h2>{soonSection.title}</h2>
+                    </div>
+                    <p className="muted">{soonSection.description}</p>
+                  </div>
+
+                  <div className="grammar-ref-topics grammar-ref-topics--soon">
+                    {filteredSoonTopics.map((topic) => (
+                      <SoonTopicCard key={topic.id} topic={topic} />
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </>
+          ) : (
+            <div className="empty-state grammar-ref-empty">
+              Ничего не найдено. Попробуйте: падежи, глаголы, письмо.
             </div>
-            <p className="muted">
-              Если вы путаетесь в окончаниях, согласовании или глаголах, начните отсюда. {readyCount} темы
-            </p>
-          </div>
-
-          <div className="grammar-ref-topics">
-            {readyTopics.map((topic) => (
-              <ReadyTopicCard key={topic.id} topic={topic} />
-            ))}
-          </div>
-
-          <div className="grammar-ref-section-title">
-            <div>
-              <span className="card-stage__category">{soonSection.label}</span>
-              <h2>{soonSection.title}</h2>
-            </div>
-            <p className="muted">
-              {soonSection.description} {soonCount} тем
-            </p>
-          </div>
-
-          <div className="grammar-ref-topics grammar-ref-topics--soon">
-            {soonTopics.map((topic) => (
-              <SoonTopicCard
-                key={topic.id}
-                title={topic.title}
-                whyItMatters={topic.whyItMatters}
-                helpsWith={topic.helpsWith}
-                examplePhrase={topic.examplePhrase}
-              />
-            ))}
-          </div>
+          )}
         </section>
       </div>
     </main>

@@ -33,6 +33,7 @@ export interface GrammarB1ReadyTopic {
   title: string
   shortTitle?: string
   status: 'ready'
+  tags: string[]
   quickUseCase: string[]
   mainRule: string
   memoryHint: string
@@ -46,6 +47,7 @@ export interface GrammarB1SoonTopic {
   id: string
   title: string
   status: 'soon'
+  tags: string[]
   whyItMatters: string
   helpsWith: string
   examplePhrase: GrammarB1CorrectExample
