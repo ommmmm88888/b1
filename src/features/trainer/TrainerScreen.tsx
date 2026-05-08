@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { b1Vocabulary } from '../../data/b1Vocabulary'
-import { isAnswerCorrect } from '../../lib/answerCheck'
+import { findMatchingAnswerRegister, isAnswerCorrect } from '../../lib/answerCheck'
 import { applyAnswerEditForRetry } from '../../lib/answerRetryState'
 import { buildAnswerDiff, getMistakeLevel } from '../../lib/answerFeedback'
 import {
@@ -17,7 +17,7 @@ import {
   saveTrainerSessionSnapshot,
   type TrainerSessionSnapshot,
 } from '../../lib/trainerSessionStorage'
-import type { ProgressState, VocabularyItem } from '../../types/training'
+import type { ProgressState, Register, VocabularyItem } from '../../types/training'
 
 type SessionMode = 'daily' | 'mistakes'
 
@@ -33,6 +33,11 @@ interface SessionState {
 }
 
 const SESSION_GOAL = 10
+const registerLabels: Record<Register, string> = {
+  informal: 'nieformalnie',
+  neutral: 'neutralnie',
+  formal: 'formalnie',
+}
 
 function shuffle(items: VocabularyItem[]): VocabularyItem[] {
   const copy = [...items]
@@ -254,8 +259,13 @@ export function TrainerScreen() {
   const deckAccuracy = `${sessionStats.correctAnswers}/${sessionStats.attempts}`
   const currentMistakes = currentItem ? progress.mistakesByItem[currentItem.id] ?? 0 : 0
   const mistakeLevel = getMistakeLevel(currentMistakes)
-  const expectedAnswer = currentItem?.acceptedAnswers[0] ?? ''
+  const expectedAnswer = currentItem?.acceptedAnswers[0]?.text ?? ''
   const answerDiff = buildAnswerDiff(session.answer, expectedAnswer)
+  const matchingAnswerRegister = currentItem
+    ? findMatchingAnswerRegister(session.answer, currentItem.acceptedAnswers)
+    : null
+  const registerMismatch =
+    Boolean(matchingAnswerRegister && currentItem && matchingAnswerRegister !== currentItem.register)
 
   function handleCheck() {
     if (!currentItem || session.checked) {
@@ -485,7 +495,12 @@ export function TrainerScreen() {
             <>
               <div className="card-stage">
                 <div className="card-stage__header">
-                  <span className="card-stage__category">{currentItem.category}</span>
+                  <span className="card-stage__meta">
+                    <span className="card-stage__category">{currentItem.category}</span>
+                    <span className={`register-badge register-badge--${currentItem.register}`}>
+                      {registerLabels[currentItem.register]}
+                    </span>
+                  </span>
                   <p className="card-stage__prompt">{currentItem.ruPrompt}</p>
                 </div>
 
@@ -554,8 +569,17 @@ export function TrainerScreen() {
                       <strong>Ваш ответ:</strong> {session.answer.trim() || '—'}
                     </div>
                     <div className="card-stage__answer">
-                      <strong>Правильный ответ:</strong> {currentItem.acceptedAnswers[0]}
+                      <strong>Правильный ответ:</strong> {expectedAnswer}
                     </div>
+                    {currentItem.acceptedAnswers.length > 1 ? (
+                      <div className="card-stage__answer">
+                        <strong>Также принимается:</strong>{' '}
+                        {currentItem.acceptedAnswers
+                          .slice(1)
+                          .map((acceptedAnswer) => `${acceptedAnswer.text} (${registerLabels[acceptedAnswer.register]})`)
+                          .join('; ')}
+                      </div>
+                    ) : null}
                     {!session.correct ? (
                       <div className="answer-diff" aria-label="Разбор различий в ответе">
                         {answerDiff.map((chunk, index) => (
@@ -576,6 +600,18 @@ export function TrainerScreen() {
                     ) : null}
                     <div className="card-stage__explanation">
                       <strong>Почему так:</strong> {currentItem.explanationRu}
+                    </div>
+                    <div className="card-stage__explanation">
+                      <strong>Грамматика:</strong>{' '}
+                      {session.correct
+                        ? 'грамматической ошибки нет.'
+                        : 'грамматически неверная часть показана в разборе различий.'}
+                    </div>
+                    <div className="card-stage__explanation">
+                      <strong>Стиль/регистр:</strong>{' '}
+                      {registerMismatch
+                        ? `ответ грамматически допустим, но звучит ${registerLabels[matchingAnswerRegister as Register]}, а исходная фраза задана как ${registerLabels[currentItem.register]}.`
+                        : `регистр совпадает с карточкой: ${registerLabels[currentItem.register]}.`}
                     </div>
                     <div className="muted">
                       Ошибок по этой карточке: {currentMistakes}

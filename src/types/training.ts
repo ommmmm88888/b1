@@ -5,10 +5,18 @@ export type TrainingCategory =
   | 'грамматические модели'
   | 'глаголы и аспект'
 
+export type Register = 'informal' | 'neutral' | 'formal'
+
+export interface AcceptedTranslationAnswer {
+  text: string
+  register: Register
+}
+
 export interface VocabularyItem {
   id: string
   ruPrompt: string
-  acceptedAnswers: string[]
+  register: Register
+  acceptedAnswers: AcceptedTranslationAnswer[]
   hintRu: string
   explanationRu: string
   category: TrainingCategory
@@ -22,4 +30,3 @@ export interface ProgressState {
   dailyCompletedCount: number
   streak: number
 }
-
