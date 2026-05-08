@@ -27,7 +27,8 @@ describe('GrammarB1Screen', () => {
     expect(screen.getAllByRole('button', { name: 'Скоро' }).length).toBeGreaterThan(0)
     expect(screen.getByRole('button', { name: 'мужской' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'женский' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'оба' })).toBeInTheDocument()
+    expect(screen.getByText('Форма:')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'обе' })).toBeInTheDocument()
 
     const search = screen.getByRole('searchbox', { name: 'Поиск по справочнику' })
 
@@ -88,7 +89,7 @@ describe('GrammarB1Screen', () => {
     expect(screen.getByText('Мужской вариант')).toBeInTheDocument()
     expect(screen.getAllByText('Chciałbym zapytać.').length).toBeGreaterThan(0)
 
-    await user.click(screen.getByRole('button', { name: 'оба' }))
+    await user.click(screen.getByRole('button', { name: 'обе' }))
     fireEvent.change(textarea, { target: { value: 'Я хотел бы спросить.' } })
     await user.click(button)
     expect(screen.getByText('Мужской вариант')).toBeInTheDocument()

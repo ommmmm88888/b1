@@ -992,8 +992,15 @@
 .grammar-how-to-say__gender-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
 }
+.grammar-how-to-say__gender-label {
+  color: #94a3b8;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 
 .grammar-how-to-say__category {
   appearance: none;

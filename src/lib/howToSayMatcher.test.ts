@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import agentsGuide from '../../AGENTS.md?raw'
 import { howToSayEntries } from '../data/howToSay'
 import {
   checkPolishPhrase,
@@ -64,6 +65,18 @@ describe('howToSayMatcher', () => {
     expect(femaleTask.status).toBe('suggestion')
     if (femaleTask.status === 'suggestion') {
       expect(femaleTask.suggestedPl).toBe('Zrobiłam zadanie.')
+    }
+
+    const maleDoingTask = findPolishSuggestion('Я делал задание.', { genderPreference: 'male' })
+    expect(maleDoingTask.status).toBe('suggestion')
+    if (maleDoingTask.status === 'suggestion') {
+      expect(maleDoingTask.suggestedPl).toBe('Robiłem zadanie.')
+    }
+
+    const femaleShop = findPolishSuggestion('Я пошла в магазин.', { genderPreference: 'female' })
+    expect(femaleShop.status).toBe('suggestion')
+    if (femaleShop.status === 'suggestion') {
+      expect(femaleShop.suggestedPl).toBe('Poszłam do sklepu.')
     }
   })
 
@@ -160,5 +173,11 @@ describe('howToSayMatcher', () => {
         expect(entry.correctedPl?.trim().length ?? 0).toBeGreaterThan(0)
       }
     }
+  })
+
+  it('keeps project agent instructions available for future sessions', () => {
+    expect(agentsGuide).toContain('PowerShell')
+    expect(agentsGuide).toContain('npm run verify')
+    expect(agentsGuide).toContain('users/{uid}/state/progress')
   })
 })

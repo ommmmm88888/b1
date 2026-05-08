@@ -94,6 +94,19 @@ export const howToSayEntries: HowToSayEntry[] = [
     correctPatterns: ['robiłem zadanie', 'robiłam zadanie', 'zrobiłem zadanie', 'zrobiłam zadanie'],
   },
   {
+    id: 'doing-task-imperf',
+    tags: ['глаголы', 'прошедшее время', 'вид'],
+    ruInputPatterns: ['я делал задание', 'я делала задание'],
+    suggestedPl: 'Robiłem zadanie. / Robiłam zadanie.',
+    suggestedPlVariants: {
+      male: 'Robiłem zadanie.',
+      female: 'Robiłam zadanie.',
+    },
+    contextRu: 'Когда важно сказать о процессе, а не о готовом результате.',
+    explanationRu: 'Robiłem / robiłam описывает процесс. Если нужно подчеркнуть результат, лучше Zrobiłem / Zrobiłam zadanie.',
+    examples: [{ pl: 'Robiłem zadanie przez godzinę.', ru: 'Я делал задание час.' }],
+  },
+  {
     id: 'wrote-letter-imperf',
     tags: ['глаголы', 'письмо', 'вид'],
     ruInputPatterns: ['я писал письмо', 'я писала письмо'],
@@ -253,6 +266,10 @@ export const howToSayEntries: HowToSayEntry[] = [
     tags: ['движение', 'город'],
     ruInputPatterns: ['я пошёл в магазин', 'я пошла в магазин'],
     suggestedPl: 'Poszedłem do sklepu. / Poszłam do sklepu.',
+    suggestedPlVariants: {
+      male: 'Poszedłem do sklepu.',
+      female: 'Poszłam do sklepu.',
+    },
     contextRu: 'Когда говорите о направлении движения.',
     explanationRu: 'Do sklepu = движение к цели, а форма зависит от рода.',
     examples: [{ pl: 'Poszedłem do sklepu.', ru: 'Я пошёл в магазин.' }],

@@ -21,7 +21,7 @@ const helperCategoryButtonLabels: Array<{ key: HowToSayHelperCategory; label: st
 const helperGenderButtons: Array<{ key: HowToSayGenderPreference; label: string }> = [
   { key: 'male', label: 'мужской' },
   { key: 'female', label: 'женский' },
-  { key: 'both', label: 'оба' },
+  { key: 'both', label: 'обе' },
 ]
 
 function getHelperCategoryLabel(category: HowToSayHelperCategory): string {
@@ -466,6 +466,7 @@ function HowToSayPanel() {
       </div>
 
       <div className="grammar-how-to-say__gender-row" role="group" aria-label="Предпочтительная форма">
+        <span className="grammar-how-to-say__gender-label">Форма:</span>
         {helperGenderButtons.map((item) => (
           <button
             key={item.key}
